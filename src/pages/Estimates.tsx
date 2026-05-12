@@ -92,7 +92,7 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
 
   useEffect(() => {
     loadEstimates()
-  }, [storeId, dateFrom, dateTo, filterStatus])
+  }, [storeId, dateFrom, dateTo])
 
   const filteredEstimates = estimates.filter(e => {
     if (filterStatus === "all") return true
