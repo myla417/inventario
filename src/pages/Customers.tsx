@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Plus, Search, Users, Pencil, Trash2, DollarSign, CreditCard, ChevronDown, AlertCircle } from "lucide-react"
@@ -42,6 +43,19 @@ export default function Customers({ storeId, initialCustomers, saveCustomers }: 
 
   const totalBalance = customers.reduce((sum, c) => sum + c.balance, 0)
   const customersWithBalance = customers.filter(c => c.balance > 0).length
+
+  const getStatusBadge = (sale: Sale) => {
+    switch (sale.status) {
+      case 'pending':
+        return <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">Pendiente</Badge>
+      case 'completed':
+        return <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Completada</Badge>
+      case 'cancelled':
+        return <Badge className="bg-red-500/20 text-red-500 border-red-500/30">Cancelada</Badge>
+      default:
+        return <Badge variant="outline">{sale.status}</Badge>
+    }
+  }
 
   const handleOpenDialog = (customer?: Customer) => {
     if (customer) {
@@ -324,7 +338,6 @@ export default function Customers({ storeId, initialCustomers, saveCustomers }: 
                       <TableRow className="border-border">
                         <TableHead className="text-foreground">Fecha</TableHead>
                         <TableHead className="text-foreground">Tipo</TableHead>
-                        <TableHead className="text-foreground">Número</TableHead>
                         <TableHead className="text-foreground">Total</TableHead>
                         <TableHead className="text-foreground">Estado</TableHead>
                       </TableRow>
@@ -334,9 +347,8 @@ export default function Customers({ storeId, initialCustomers, saveCustomers }: 
                         <TableRow key={s.id} className="border-border">
                           <TableCell className="text-muted-foreground">{new Date(s.created_at).toLocaleDateString('es-CO')}</TableCell>
                           <TableCell className="text-foreground">{s.is_estimate ? 'Cotización' : 'Venta'}</TableCell>
-                          <TableCell className="font-mono text-muted-foreground">{s.estimate_number || s.id.slice(0, 8)}</TableCell>
                           <TableCell className="font-medium text-foreground">${formatAmount(s.total)}</TableCell>
-                          <TableCell className="text-muted-foreground">{s.is_estimate ? 'Cotización' : s.status}</TableCell>
+                          <TableCell>{getStatusBadge(s)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
