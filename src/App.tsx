@@ -184,7 +184,7 @@ function AppContext() {
             role={userRole?.role || ''}
           />
         }>
-          <Route path="/dashboard" element={<Dashboard storeId={storeSettings.id} products={products} userRole={userRole?.role || ''} />} />
+          <Route path="/dashboard" element={<Dashboard storeId={storeSettings.id} userRole={userRole?.role || ''} />} />
           <Route path="/pos" element={<POS storeId={storeSettings.id} products={products} customers={customers} paymentMethods={paymentMethods} exchangeRates={exchangeRates} storeName={storeSettings.name} />} />
           <Route path="/estimates" element={<Estimates storeId={storeSettings.id} products={products} customers={customers} paymentMethods={paymentMethods} exchangeRates={exchangeRates} storeName={storeSettings.name} />} />
           <Route path="/products" element={<Products storeId={storeSettings.id} initialProducts={products} initialCategories={categories} saveProducts={setProducts} saveCategories={setCategories} />} />

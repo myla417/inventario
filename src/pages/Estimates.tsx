@@ -454,6 +454,7 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
                       <TableHead className="text-foreground">Cliente</TableHead>
                       <TableHead className="text-foreground">Moneda</TableHead>
                       <TableHead className="text-foreground text-right">Total</TableHead>
+                      <TableHead className="text-foreground">Estado</TableHead>
                       <TableHead className="text-foreground">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -475,6 +476,7 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
                         <TableCell className="text-right font-medium text-foreground">
                           {getCurrencySymbol(estimate.currency_paid)}{formatAmount(estimate.total)}
                         </TableCell>
+                        <TableCell>{getStatusBadge(estimate.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             {estimate.status === 'pending' && (
