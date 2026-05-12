@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -10,6 +10,10 @@ import { supabase } from "@/lib/supabase"
 interface DashboardProps {
   storeId: string
   userRole: string
+  kanbanColumns: DashboardColumn[]
+  kanbanTasks: any[]
+  setKanbanColumns: (cols: DashboardColumn[]) => void
+  setKanbanTasks: (tasks: any[]) => void
 }
 
 interface TaskItem {
@@ -27,8 +31,7 @@ interface ColumnItem {
   tasks: TaskItem[]
 }
 
-export default function Dashboard({ storeId, userRole }: DashboardProps) {
-  const [columns, setColumns] = useState<ColumnItem[]>([])
+export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTasks, setKanbanColumns, setKanbanTasks }: DashboardProps) {
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null)
   const [editingColumnName, setEditingColumnName] = useState('')
   const [addingTaskToColumn, setAddingTaskToColumn] = useState<string | null>(null)
@@ -41,40 +44,17 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
   const [editTaskDesc, setEditTaskDesc] = useState('')
   const [editTaskDueDate, setEditTaskDueDate] = useState('')
 
-  const loadKanban = async () => {
-    if (!storeId) return
-
-    const { data: cols } = await supabase
-      .from('dashboard_columns')
-      .select('*')
-      .eq('store_id', storeId)
-      .order('position', { ascending: true })
-
-    const { data: tasks } = await supabase
-      .from('dashboard_tasks')
-      .select('*')
-      .eq('store_id', storeId)
-
-    const dbColumns = (cols || []) as DashboardColumn[]
-    const dbTasks = (tasks || [])
-
-    if (dbColumns.length === 0) {
-      await supabase.from('dashboard_columns').insert([
-        { store_id: storeId, name: 'Por hacer', position: 0 },
-        { store_id: storeId, name: 'En progreso', position: 1 },
-        { store_id: storeId, name: 'Hecho', position: 2 }
-      ])
-      setColumns([
+  const columns: ColumnItem[] = kanbanColumns.length === 0
+    ? [
         { id: 'col-1', name: 'Por hacer', position: 0, tasks: [] },
         { id: 'col-2', name: 'En progreso', position: 1, tasks: [] },
         { id: 'col-3', name: 'Hecho', position: 2, tasks: [] }
-      ])
-    } else {
-      setColumns(dbColumns.map(col => ({
+      ]
+    : kanbanColumns.map(col => ({
         id: col.id,
         name: col.name,
         position: col.position,
-        tasks: dbTasks
+        tasks: kanbanTasks
           .filter(t => t.column_id === col.id)
           .map(t => ({
             id: t.id,
@@ -83,13 +63,7 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
             description: t.description || '',
             dueDate: t.due_date
           }))
-      })))
-    }
-  }
-
-  useEffect(() => {
-    loadKanban()
-  }, [storeId])
+      }))
 
   const isAdmin = userRole === 'admin'
 
@@ -108,12 +82,12 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
   }
 
   const saveColumnName = async () => {
-    if (!editingColumnId || !storeId) return
+    if (!editingColumnId) return
     await supabase
       .from('dashboard_columns')
       .update({ name: editingColumnName })
       .eq('id', editingColumnId)
-    setColumns(prev => prev.map(c => c.id === editingColumnId ? { ...c, name: editingColumnName } : c))
+    setKanbanColumns(kanbanColumns.map(c => c.id === editingColumnId ? { ...c, name: editingColumnName } : c))
     setEditingColumnId(null)
   }
 
@@ -134,16 +108,7 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
         .select()
         .single()
       if (data) {
-        const newTask: TaskItem = {
-          id: data.id,
-          columnId: data.column_id,
-          title: data.title,
-          description: data.description || '',
-          dueDate: data.due_date
-        }
-        setColumns(prev => prev.map(c =>
-          c.id === addingTaskToColumn ? { ...c, tasks: [...c.tasks, newTask] } : c
-        ))
+        setKanbanTasks([...kanbanTasks, data])
         setAddingTaskToColumn(null)
         setNewTaskTitle('')
         setNewTaskDesc('')
@@ -173,22 +138,16 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
           due_date: editTaskDueDate || null
         })
         .eq('id', editingTask.id)
-      setColumns(prev => prev.map(c =>
-        c.id === editingTask.columnId
-          ? { ...c, tasks: c.tasks.map(t => t.id === editingTask.id ? { ...t, title: editTaskTitle.trim(), description: editTaskDesc.trim(), dueDate: editTaskDueDate || null } : t) }
-          : c
-      ))
+      setKanbanTasks(kanbanTasks.map(t => t.id === editingTask.id ? { ...t, title: editTaskTitle.trim(), description: editTaskDesc.trim(), due_date: editTaskDueDate || null } : t))
       setEditingTask(null)
     } finally {
       setSavingTask(false)
     }
   }
 
-  const deleteTask = async (taskId: string, columnId: string) => {
+  const deleteTask = async (taskId: string) => {
     await supabase.from('dashboard_tasks').delete().eq('id', taskId)
-    setColumns(prev => prev.map(c =>
-      c.id === columnId ? { ...c, tasks: c.tasks.filter(t => t.id !== taskId) } : c
-    ))
+    setKanbanTasks(kanbanTasks.filter(t => t.id !== taskId))
   }
 
   const moveTask = async (task: TaskItem, direction: 'left' | 'right') => {
@@ -204,15 +163,7 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
       .update({ column_id: newColumnId })
       .eq('id', task.id)
 
-    setColumns(prev => prev.map(c => {
-      if (c.id === task.columnId) {
-        return { ...c, tasks: c.tasks.filter(t => t.id !== task.id) }
-      }
-      if (c.id === newColumnId) {
-        return { ...c, tasks: [...c.tasks, { ...task, columnId: newColumnId }] }
-      }
-      return c
-    }))
+    setKanbanTasks(kanbanTasks.map(t => t.id === task.id ? { ...t, column_id: newColumnId } : t))
   }
 
   return (
@@ -257,50 +208,50 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
                       key={task.id}
                       className={`bg-card p-3 rounded-md text-sm border-2 ${isLastColumn ? 'border-green-500' : isUrgent(task.dueDate) ? 'border-red-500' :  'border-blue-500'}`}
                     >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="font-medium text-foreground">{task.title}</span>
-                    {isAdmin && (
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-medium text-foreground">{task.title}</span>
+                        {isAdmin && (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              onClick={() => openEditTask(task)}
+                              className="text-muted-foreground hover:text-primary"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => deleteTask(task.id)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {task.description && (
+                        <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
+                      )}
+                      {task.dueDate && (
+                        <p className={`text-xs mt-2 border-t border-border pt-2 ${isUrgent(task.dueDate) && !isLastColumn ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                          Vence: {new Date(task.dueDate).toLocaleDateString('es-CO')}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between mt-2 border-t border-border pt-2">
                         <button
-                          onClick={() => openEditTask(task)}
-                          className="text-muted-foreground hover:text-primary"
+                          onClick={() => moveTask(task, 'left')}
+                          disabled={colIndex === 0}
+                          className="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
                         >
-                          <Pencil className="h-3 w-3" />
+                          <ChevronLeft className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => deleteTask(task.id, col.id)}
-                          className="text-muted-foreground hover:text-destructive"
+                          onClick={() => moveTask(task, 'right')}
+                          disabled={colIndex === columns.length - 1}
+                          className="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
                         >
-                          <X className="h-3 w-3" />
+                          <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
-                    )}
-                  </div>
-                  {task.description && (
-                    <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
-                  )}
-                  {task.dueDate && (
-                    <p className={`text-xs mt-2 border-t border-border pt-2 ${isUrgent(task.dueDate) && !isLastColumn ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-                      Vence: {new Date(task.dueDate).toLocaleDateString('es-CO')}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between mt-2 border-t border-border pt-2">
-                    <button
-                      onClick={() => moveTask(task, 'left')}
-                      disabled={colIndex === 0}
-                      className="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => moveTask(task, 'right')}
-                      disabled={colIndex === columns.length - 1}
-                      className="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+                    </div>
                   )
                 })}
             </div>
@@ -338,7 +289,7 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
               type="date"
               value={newTaskDueDate}
               onChange={e => setNewTaskDueDate(e.target.value)}
-              className="bg-input border-border"
+              className="bg-input border-border [appearance:none] [&::-webkit-calendar-picker-indicator]:invert"
             />
           </div>
           <DialogFooter>
@@ -372,7 +323,7 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
               type="date"
               value={editTaskDueDate}
               onChange={e => setEditTaskDueDate(e.target.value)}
-              className="bg-input border-border"
+              className="bg-input border-border [appearance:none] [&::-webkit-calendar-picker-indicator]:invert"
             />
           </div>
           <DialogFooter>

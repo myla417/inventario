@@ -20,6 +20,7 @@ import type { Product } from './interfaces/data/Product'
 import type { Customer } from './interfaces/data/Customer'
 import type { Category } from './interfaces/data/Category'
 import type { ExchangeRate } from './interfaces/data/ExchangeRate'
+import type { DashboardColumn } from './interfaces/data/DashboardTask'
 
 function App() {
   return (
@@ -42,6 +43,8 @@ function AppContext() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([])
+  const [kanbanColumns, setKanbanColumns] = useState<DashboardColumn[]>([])
+  const [kanbanTasks, setKanbanTasks] = useState<any[]>([])
 
   const getSettings = async () => {
     if (!user?.id) return
@@ -118,12 +121,29 @@ function AppContext() {
     if (data) setExchangeRates(data)
   }
 
+  const getKanbanData = async () => {
+    if (!storeSettings.id) return
+    const { data: cols } = await supabase
+      .from('dashboard_columns')
+      .select('*')
+      .eq('store_id', storeSettings.id)
+      .order('position', { ascending: true })
+      .overrideTypes<Array<DashboardColumn>>()
+    const { data: tasks } = await supabase
+      .from('dashboard_tasks')
+      .select('*')
+      .eq('store_id', storeSettings.id)
+    setKanbanColumns(cols || [])
+    setKanbanTasks(tasks || [])
+  }
+
   useEffect(() => {
     getPaymentMethods()
     getProducts()
     getCustomers()
     getCategories()
     getExchangeRates()
+    getKanbanData()
   }, [storeSettings.id])
 
   useEffect(() => {
@@ -184,7 +204,7 @@ function AppContext() {
             role={userRole?.role || ''}
           />
         }>
-          <Route path="/dashboard" element={<Dashboard storeId={storeSettings.id} userRole={userRole?.role || ''} />} />
+          <Route path="/dashboard" element={<Dashboard storeId={storeSettings.id} userRole={userRole?.role || ''} kanbanColumns={kanbanColumns} kanbanTasks={kanbanTasks} setKanbanColumns={setKanbanColumns} setKanbanTasks={setKanbanTasks} />} />
           <Route path="/pos" element={<POS storeId={storeSettings.id} products={products} customers={customers} paymentMethods={paymentMethods} exchangeRates={exchangeRates} storeName={storeSettings.name} />} />
           <Route path="/estimates" element={<Estimates storeId={storeSettings.id} products={products} customers={customers} paymentMethods={paymentMethods} exchangeRates={exchangeRates} storeName={storeSettings.name} />} />
           <Route path="/products" element={<Products storeId={storeSettings.id} initialProducts={products} initialCategories={categories} saveProducts={setProducts} saveCategories={setCategories} />} />

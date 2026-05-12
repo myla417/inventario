@@ -275,7 +275,7 @@ export default function Sales({ storeId }: SalesProps) {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="bg-input border-border"
+                className="bg-input border-border [appearance:none] [&::-webkit-calendar-picker-indicator]:invert"
               />
             </div>
             <div className="space-y-2 flex-1">
@@ -284,7 +284,7 @@ export default function Sales({ storeId }: SalesProps) {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="bg-input border-border"
+                className="bg-input border-border [appearance:none] [&::-webkit-calendar-picker-indicator]:invert"
               />
             </div>
             <div className="space-y-2 flex items-end">
