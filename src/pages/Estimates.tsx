@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FileText, Eye, Printer, ShoppingCart, X, Calendar, Search, CheckCircle, AlertCircle, MessageCircle } from "lucide-react"
 import html2canvas from "html2canvas"
 import { formatAmount } from "@/Utils.functions"
@@ -34,6 +35,7 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
     return d.toISOString().split('T')[0]
   })
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().split('T')[0])
+  const [filterStatus, setFilterStatus] = useState("all")
   const [selectedEstimate, setSelectedEstimate] = useState<Sale | null>(null)
   const [estimateItems, setEstimateItems] = useState<SaleItem[]>([])
   const [loadingItems, setLoadingItems] = useState(false)
@@ -45,6 +47,7 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
   const [printItems, setPrintItems] = useState<SaleItem[]>([])
   const [whatsappPreview, setWhatsappPreview] = useState<{ estimate: Sale; dataUrl: string } | null>(null)
   const [sharing, setSharing] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState<Sale | null>(null)
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -89,7 +92,12 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
 
   useEffect(() => {
     loadEstimates()
-  }, [storeId, dateFrom, dateTo])
+  }, [storeId, dateFrom, dateTo, filterStatus])
+
+  const filteredEstimates = estimates.filter(e => {
+    if (filterStatus === "all") return true
+    return e.status === filterStatus
+  })
 
   const loadEstimateItems = async (estimateId: string) => {
     setLoadingItems(true)
@@ -206,23 +214,27 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
     }
   }
 
-  const handleCancelEstimate = async (estimate: Sale) => {
-    if (cancelling) return
+  const handleCancelEstimate = (estimate: Sale) => {
+    setConfirmCancel(estimate)
+  }
+
+  const confirmCancelEstimate = async () => {
+    if (cancelling || !confirmCancel) return
     setCancelling(true)
     try {
       const { error } = await supabase
         .from('sales')
         .update({ status: 'cancelled' })
-        .eq('id', estimate.id)
+        .eq('id', confirmCancel.id)
 
       if (error) {
         showError(`Error al cancelar: ${error.message}`)
         return
       }
 
-      showSuccess(`Cotización ${estimate.estimate_number} cancelada`)
-      setEstimates(estimates.map(e => e.id === estimate.id ? { ...e, status: 'cancelled' as const } : e))
-      if (selectedEstimate?.id === estimate.id) {
+      showSuccess(`Cotización ${confirmCancel.estimate_number} cancelada`)
+      setEstimates(estimates.map(e => e.id === confirmCancel.id ? { ...e, status: 'cancelled' as const } : e))
+      if (selectedEstimate?.id === confirmCancel.id) {
         setSelectedEstimate(null)
         setEstimateItems([])
       }
@@ -231,6 +243,7 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
       console.error(err)
     } finally {
       setCancelling(false)
+      setConfirmCancel(null)
     }
   }
 
@@ -381,6 +394,20 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
                 className="bg-input border-border"
               />
             </div>
+            <div className="space-y-2 sm:w-48">
+              <Label className="text-xs text-muted-foreground">Estado</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="bg-input border-border">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="pending">Pendientes</SelectItem>
+                  <SelectItem value="completed">Convertidas</SelectItem>
+                  <SelectItem value="cancelled">Canceladas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2 flex items-end">
               <Button onClick={() => loadEstimates()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <Search className="h-4 w-4 mr-2" />
@@ -394,17 +421,17 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
       <Card className="border-border bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-foreground">Lista de Cotizaciones</CardTitle>
-          <CardDescription>{estimates.length} cotizaciones encontradas</CardDescription>
+          <CardDescription>{filteredEstimates.length} cotizaciones encontradas</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <p className="text-center text-muted-foreground py-8">Cargando cotizaciones...</p>
-          ) : estimates.length === 0 ? (
+          ) : filteredEstimates.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No hay cotizaciones en el período seleccionado</p>
           ) : (
             <>
               <div className="block lg:hidden space-y-3">
-                {estimates.map(estimate => (
+                {filteredEstimates.map(estimate => (
                   <Card key={estimate.id} className="border-border bg-card/50">
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start">
@@ -459,7 +486,7 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {estimates.map(estimate => (
+                    {filteredEstimates.map(estimate => (
                       <TableRow key={estimate.id} className="border-border">
                         <TableCell className="font-bold text-primary">{estimate.estimate_number}</TableCell>
                         <TableCell className="text-muted-foreground">
@@ -734,6 +761,37 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!confirmCancel} onOpenChange={() => !cancelling && setConfirmCancel(null)}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              Cancelar Cotización
+            </DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de cancelar la cotización {confirmCancel?.estimate_number}? Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-border"
+              onClick={() => setConfirmCancel(null)}
+              disabled={cancelling}
+            >
+              No, mantener
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmCancelEstimate}
+              disabled={cancelling}
+            >
+              {cancelling ? 'Cancelando...' : 'Sí, cancelar'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

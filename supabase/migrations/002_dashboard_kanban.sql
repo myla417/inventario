@@ -2,6 +2,7 @@
 CREATE TABLE dashboard_tasks (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   store_id UUID REFERENCES stores(id) ON DELETE CASCADE NOT NULL,
+  column_id UUID REFERENCES dashboard_columns(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL,
   description TEXT DEFAULT '',
   due_date DATE,
