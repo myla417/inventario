@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Plus, X } from "lucide-react"
+import { Plus, X, ChevronLeft, ChevronRight, Pencil } from "lucide-react"
 import type { DashboardColumn } from "@/interfaces/data/DashboardTask"
 import { supabase } from "@/lib/supabase"
 
@@ -23,6 +23,7 @@ interface TaskItem {
 interface ColumnItem {
   id: string
   name: string
+  position: number
   tasks: TaskItem[]
 }
 
@@ -35,6 +36,10 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
   const [newTaskDesc, setNewTaskDesc] = useState('')
   const [newTaskDueDate, setNewTaskDueDate] = useState('')
   const [savingTask, setSavingTask] = useState(false)
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null)
+  const [editTaskTitle, setEditTaskTitle] = useState('')
+  const [editTaskDesc, setEditTaskDesc] = useState('')
+  const [editTaskDueDate, setEditTaskDueDate] = useState('')
 
   const loadKanban = async () => {
     if (!storeId) return
@@ -60,14 +65,15 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
         { store_id: storeId, name: 'Hecho', position: 2 }
       ])
       setColumns([
-        { id: 'col-1', name: 'Por hacer', tasks: [] },
-        { id: 'col-2', name: 'En progreso', tasks: [] },
-        { id: 'col-3', name: 'Hecho', tasks: [] }
+        { id: 'col-1', name: 'Por hacer', position: 0, tasks: [] },
+        { id: 'col-2', name: 'En progreso', position: 1, tasks: [] },
+        { id: 'col-3', name: 'Hecho', position: 2, tasks: [] }
       ])
     } else {
       setColumns(dbColumns.map(col => ({
         id: col.id,
         name: col.name,
+        position: col.position,
         tasks: dbTasks
           .filter(t => t.column_id === col.id)
           .map(t => ({
@@ -148,11 +154,65 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
     }
   }
 
+  const openEditTask = (task: TaskItem) => {
+    setEditingTask(task)
+    setEditTaskTitle(task.title)
+    setEditTaskDesc(task.description)
+    setEditTaskDueDate(task.dueDate || '')
+  }
+
+  const saveEditTask = async () => {
+    if (!editingTask || !editTaskTitle.trim()) return
+    setSavingTask(true)
+    try {
+      await supabase
+        .from('dashboard_tasks')
+        .update({
+          title: editTaskTitle.trim(),
+          description: editTaskDesc.trim(),
+          due_date: editTaskDueDate || null
+        })
+        .eq('id', editingTask.id)
+      setColumns(prev => prev.map(c =>
+        c.id === editingTask.columnId
+          ? { ...c, tasks: c.tasks.map(t => t.id === editingTask.id ? { ...t, title: editTaskTitle.trim(), description: editTaskDesc.trim(), dueDate: editTaskDueDate || null } : t) }
+          : c
+      ))
+      setEditingTask(null)
+    } finally {
+      setSavingTask(false)
+    }
+  }
+
   const deleteTask = async (taskId: string, columnId: string) => {
     await supabase.from('dashboard_tasks').delete().eq('id', taskId)
     setColumns(prev => prev.map(c =>
       c.id === columnId ? { ...c, tasks: c.tasks.filter(t => t.id !== taskId) } : c
     ))
+  }
+
+  const moveTask = async (task: TaskItem, direction: 'left' | 'right') => {
+    const colIndex = columns.findIndex(c => c.id === task.columnId)
+    if (colIndex === -1) return
+
+    const newColIndex = direction === 'left' ? colIndex - 1 : colIndex + 1
+    if (newColIndex < 0 || newColIndex >= columns.length) return
+
+    const newColumnId = columns[newColIndex].id
+    await supabase
+      .from('dashboard_tasks')
+      .update({ column_id: newColumnId })
+      .eq('id', task.id)
+
+    setColumns(prev => prev.map(c => {
+      if (c.id === task.columnId) {
+        return { ...c, tasks: c.tasks.filter(t => t.id !== task.id) }
+      }
+      if (c.id === newColumnId) {
+        return { ...c, tasks: [...c.tasks, { ...task, columnId: newColumnId }] }
+      }
+      return c
+    }))
   }
 
   return (
@@ -165,7 +225,7 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-4">
-        {columns.map(col => (
+        {columns.map((col, colIndex) => (
           <div key={col.id} className="flex-shrink-0 w-72 bg-muted/50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               {editingColumnId === col.id ? (
@@ -190,32 +250,59 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
               </span>
             </div>
             <div className="space-y-2 min-h-[200px]">
-              {col.tasks.map(task => (
-                <div
-                  key={task.id}
-                  className={`bg-card p-3 rounded-md text-sm border ${isUrgent(task.dueDate) ? 'border-red-500 border-2' : 'border-border'}`}
-                >
+              {col.tasks.map((task) => {
+                  const isLastColumn = colIndex === columns.length - 1
+                  return (
+                    <div
+                      key={task.id}
+                      className={`bg-card p-3 rounded-md text-sm border-2 ${isLastColumn ? 'border-green-500' : isUrgent(task.dueDate) ? 'border-red-500' :  'border-blue-500'}`}
+                    >
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-medium text-foreground">{task.title}</span>
                     {isAdmin && (
-                      <button
-                        onClick={() => deleteTask(task.id, col.id)}
-                        className="text-muted-foreground hover:text-destructive flex-shrink-0"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => openEditTask(task)}
+                          className="text-muted-foreground hover:text-primary"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => deleteTask(task.id, col.id)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
                     )}
                   </div>
                   {task.description && (
                     <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
                   )}
                   {task.dueDate && (
-                    <p className={`text-xs mt-2 border-t border-border pt-2 ${isUrgent(task.dueDate) ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                    <p className={`text-xs mt-2 border-t border-border pt-2 ${isUrgent(task.dueDate) && !isLastColumn ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
                       Vence: {new Date(task.dueDate).toLocaleDateString('es-CO')}
                     </p>
                   )}
+                  <div className="flex items-center justify-between mt-2 border-t border-border pt-2">
+                    <button
+                      onClick={() => moveTask(task, 'left')}
+                      disabled={colIndex === 0}
+                      className="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => moveTask(task, 'right')}
+                      disabled={colIndex === columns.length - 1}
+                      className="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-              ))}
+                  )
+                })}
             </div>
             <Button
               variant="ghost"
@@ -239,22 +326,59 @@ export default function Dashboard({ storeId, userRole }: DashboardProps) {
               placeholder="Título de la tarea"
               value={newTaskTitle}
               onChange={e => setNewTaskTitle(e.target.value)}
+              className="bg-input border-border"
             />
             <Textarea
               placeholder="Descripción (opcional)"
               value={newTaskDesc}
               onChange={e => setNewTaskDesc(e.target.value)}
+              className="bg-input border-border"
             />
             <Input
               type="date"
               value={newTaskDueDate}
               onChange={e => setNewTaskDueDate(e.target.value)}
+              className="bg-input border-border"
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddingTaskToColumn(null)}>Cancelar</Button>
             <Button onClick={addTask} disabled={savingTask || !newTaskTitle.trim()}>
               {savingTask ? 'Guardando...' : 'Agregar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Tarea</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Título de la tarea"
+              value={editTaskTitle}
+              onChange={e => setEditTaskTitle(e.target.value)}
+              className="bg-input border-border"
+            />
+            <Textarea
+              placeholder="Descripción (opcional)"
+              value={editTaskDesc}
+              onChange={e => setEditTaskDesc(e.target.value)}
+              className="bg-input border-border"
+            />
+            <Input
+              type="date"
+              value={editTaskDueDate}
+              onChange={e => setEditTaskDueDate(e.target.value)}
+              className="bg-input border-border"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingTask(null)}>Cancelar</Button>
+            <Button onClick={saveEditTask} disabled={savingTask || !editTaskTitle.trim()}>
+              {savingTask ? 'Guardando...' : 'Guardar'}
             </Button>
           </DialogFooter>
         </DialogContent>
