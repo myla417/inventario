@@ -296,6 +296,12 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
               background-color: var(--background) !important;
               border-color: var(--border) !important;
             }
+            p {
+              background-color: transparent !important;
+            }
+            strong {
+              background-color: transparent !important;
+            }
           `
           doc.head.appendChild(style)
         }
