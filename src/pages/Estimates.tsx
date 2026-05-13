@@ -646,17 +646,19 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
               <DialogFooter data-print-hide>
                 {selectedEstimate.status === 'pending' && (
                   <>
-                    <Button variant="outline" className="border-border" onClick={() => handlePrint(selectedEstimate)}>
-                      <Printer className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" className="border-green-500/50 text-green-500 hover:bg-green-500/10" onClick={() => handleShareToWhatsApp(selectedEstimate)} disabled={sharing}>
-                      <MessageCircle className="h-4 w-4" />
-                      {sharing ? ' Compartiendo...' : ''}
-                    </Button>
-                    <Button variant="outline" className="border-red-500/50 text-red-500 hover:bg-red-500/10" onClick={() => handleCancelEstimate(selectedEstimate)} disabled={cancelling}>
-                      <X className="h-4 w-4" />
-                      {cancelling ? ' Cancelando...' : ''}
-                    </Button>
+                    <div className="flex flex-row gap-2">
+                      <Button variant="outline" className="flex-1 border-border" onClick={() => handlePrint(selectedEstimate)}>
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" className="flex-1 border-green-500/50 text-green-500 hover:bg-green-500/10" onClick={() => handleShareToWhatsApp(selectedEstimate)} disabled={sharing}>
+                        <MessageCircle className="h-4 w-4" />
+                        {sharing ? ' Compartiendo...' : ''}
+                      </Button>
+                      <Button variant="outline" className="flex-1 border-red-500/50 text-red-500 hover:bg-red-500/10" onClick={() => handleCancelEstimate(selectedEstimate)} disabled={cancelling}>
+                        <X className="h-4 w-4" />
+                        {cancelling ? ' Cancelando...' : ''}
+                      </Button>
+                    </div>
                     <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleConvertToSale} disabled={converting}>
                       <ShoppingCart className="h-4 w-4" />
                       {converting ? ' Convirtiendo...' : ' Convertir a Venta'}

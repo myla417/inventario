@@ -126,6 +126,9 @@
   .print-only {
     display: block !important;
   }
+  [data-print-hide] {
+    display: none !important;
+  }
   body {
     background: white !important;
     color: black !important;
