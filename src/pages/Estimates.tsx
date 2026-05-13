@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -48,6 +48,8 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
   const [whatsappPreview, setWhatsappPreview] = useState<{ estimate: Sale; dataUrl: string } | null>(null)
   const [sharing, setSharing] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState<Sale | null>(null)
+  const selectedEstimateRef = useRef<Sale | null>(null)
+  const estimateItemsRef = useRef<SaleItem[]>([])
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -254,10 +256,22 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
       .eq('sale_id', estimate.id)
 
     if (data) {
+      selectedEstimateRef.current = selectedEstimate
+      estimateItemsRef.current = estimateItems
       setPrintItems(data as unknown as SaleItem[])
       setPrintEstimate(estimate)
+      setSelectedEstimate(null)
       await new Promise(resolve => setTimeout(resolve, 500))
       window.print()
+      setTimeout(() => {
+        if (selectedEstimateRef.current) {
+          setSelectedEstimate(selectedEstimateRef.current)
+          setEstimateItems(estimateItemsRef.current)
+          loadEstimateItems(selectedEstimateRef.current.id)
+        }
+        setPrintEstimate(null)
+        setPrintItems([])
+      }, 100)
     }
   }
 
