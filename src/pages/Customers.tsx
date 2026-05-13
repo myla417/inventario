@@ -35,6 +35,10 @@ export default function Customers({ storeId, userRole, paymentMethods, initialCu
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [customerFilter, setCustomerFilter] = useState("")
   const [showWithBalanceOnly, setShowWithBalanceOnly] = useState(false)
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
+  const [payingCustomer, setPayingCustomer] = useState<Customer | null>(null)
+  const [paymentAmount, setPaymentAmount] = useState("")
+  const [savingPayment, setSavingPayment] = useState(false)
 
   const filteredCustomers = customers.filter(c =>
     (c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,6 +127,37 @@ export default function Customers({ storeId, userRole, paymentMethods, initialCu
     if (error) { console.error(error); return }
     setCustomers(customers.filter(c => c.id !== id))
     saveCustomers(customers.filter(c => c.id !== id))
+  }
+
+  const handleOpenPaymentDialog = (customer: Customer) => {
+    setPayingCustomer(customer)
+    setPaymentAmount("")
+    setIsPaymentDialogOpen(true)
+  }
+
+  const handleSavePayment = async () => {
+    if (savingPayment || !payingCustomer) return
+    const amount = parseFloat(paymentAmount)
+    if (!amount || amount <= 0) return
+    if (amount > payingCustomer.balance) {
+      alert("El monto no puede ser mayor al saldo pendiente")
+      return
+    }
+    setSavingPayment(true)
+    try {
+      const newBalance = payingCustomer.balance - amount
+      const { data, error } = await supabase.from('customers').update({ balance: newBalance }).eq('id', payingCustomer.id).select().single()
+      if (error) { console.error(error); return }
+      if (data) {
+        const updated = data as unknown as Customer
+        setCustomers(customers.map(c => c.id === payingCustomer.id ? updated : c))
+        saveCustomers(customers.map(c => c.id === payingCustomer.id ? updated : c))
+      }
+      setIsPaymentDialogOpen(false)
+      setPayingCustomer(null)
+    } finally {
+      setSavingPayment(false)
+    }
   }
 
   const loadCustomerSales = async (customer: Customer) => {
@@ -216,6 +251,26 @@ export default function Customers({ storeId, userRole, paymentMethods, initialCu
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            <Dialog open={isPaymentDialogOpen} onOpenChange={(open) => { setIsPaymentDialogOpen(open); if (!open) { setPayingCustomer(null); setPaymentAmount("") }}}>
+              <DialogContent className="bg-card border-border">
+                <DialogHeader>
+                  <DialogTitle className="text-foreground">Pagar Deuda</DialogTitle>
+                  <DialogDescription>{payingCustomer ? `${payingCustomer.name} tiene un saldo pendiente de $${formatAmount(payingCustomer.balance)}` : ""}</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Monto a Pagar (COP)</Label>
+                    <Input type="number" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="bg-input border-border" placeholder="0.00" />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => { setIsPaymentDialogOpen(false); setPayingCustomer(null) }}>Cancelar</Button>
+                  <Button disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || savingPayment} onClick={handleSavePayment} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                    {savingPayment ? 'Guardando...' : 'Confirmar Pago'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="block lg:hidden space-y-3">
@@ -227,6 +282,7 @@ export default function Customers({ storeId, userRole, paymentMethods, initialCu
                     <p className="text-sm text-muted-foreground">{c.phone}</p>
                   </div>
                   <div className="flex gap-1">
+                    {c.balance > 0 && isAdmin && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenPaymentDialog(c)}><DollarSign className="h-4 w-4 text-green-500" /></Button>}
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(c)}><Pencil className="h-4 w-4 text-primary" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteCustomer(c.id)}><Trash2 className="h-4 w-4 text-secondary" /></Button>
                   </div>
@@ -264,6 +320,7 @@ export default function Customers({ storeId, userRole, paymentMethods, initialCu
                       <TableCell className={c.balance > 0 ? "text-secondary font-medium" : "text-foreground"}>${formatAmount(c.balance)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
+                          {c.balance > 0 && isAdmin && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenPaymentDialog(c)}><DollarSign className="h-4 w-4 text-green-500" /></Button>}
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(c)}><Pencil className="h-4 w-4 text-primary" /></Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteCustomer(c.id)}><Trash2 className="h-4 w-4 text-secondary" /></Button>
                         </div>
