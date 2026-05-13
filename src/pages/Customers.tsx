@@ -12,14 +12,17 @@ import type { Customer, CustomerFormData } from "@/interfaces/data/Customer"
 import type { Sale } from "@/interfaces/data/Sale"
 import { supabase } from "@/lib/supabase"
 import { formatAmount } from "@/Utils.functions"
+import type { PaymentMethod } from "@/interfaces/data/PaymentMethod"
 
 interface CustomersProps {
   storeId: string
+  userRole: string
   initialCustomers: Customer[]
+  paymentMethods: PaymentMethod[] 
   saveCustomers: (customers: Customer[]) => void
 }
 
-export default function Customers({ storeId, initialCustomers, saveCustomers }: CustomersProps) {
+export default function Customers({ storeId, userRole, paymentMethods, initialCustomers, saveCustomers }: CustomersProps) {
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers)
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -43,6 +46,8 @@ export default function Customers({ storeId, initialCustomers, saveCustomers }: 
 
   const totalBalance = customers.reduce((sum, c) => sum + c.balance, 0)
   const customersWithBalance = customers.filter(c => c.balance > 0).length
+  const isAdmin = userRole === 'admin'
+  const getSelectedCurrency = (paymentMethod: string) =>  paymentMethods.find(pm => pm.id === paymentMethod)?.currency || paymentMethod
 
   const getStatusBadge = (sale: Sale) => {
     switch (sale.status) {
@@ -201,7 +206,7 @@ export default function Customers({ storeId, initialCustomers, saveCustomers }: 
                   <div className="space-y-2"><Label>Teléfono</Label><Input value={newCustomer.phone} onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })} className="bg-input border-border" /></div>
                   <div className="space-y-2"><Label>Dirección</Label><Input value={newCustomer.address} onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })} className="bg-input border-border" /></div>
                   <div className="space-y-2"><Label>Notas</Label><Input value={newCustomer.notes} onChange={(e) => setNewCustomer({ ...newCustomer, notes: e.target.value })} className="bg-input border-border" /></div>
-                  <div className="space-y-2"><Label>Límite de Crédito (COP)</Label><Input type="number" step="0.01" value={newCustomer.credit_limit || ""} onChange={(e) => setNewCustomer({ ...newCustomer, credit_limit: parseFloat(e.target.value) || 0 })} className="bg-input border-border" /></div>
+                  {isAdmin && (<div className="space-y-2"><Label>Límite de Crédito (COP)</Label><Input type="number" step="0.01" value={newCustomer.credit_limit || ""} onChange={(e) => setNewCustomer({ ...newCustomer, credit_limit: parseFloat(e.target.value) || 0 })} className="bg-input border-border" /></div>)}
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => { setIsDialogOpen(false); setEditingCustomer(null) }}>Cancelar</Button>
@@ -339,6 +344,7 @@ export default function Customers({ storeId, initialCustomers, saveCustomers }: 
                         <TableHead className="text-foreground">Fecha</TableHead>
                         <TableHead className="text-foreground">Tipo</TableHead>
                         <TableHead className="text-foreground">Total</TableHead>
+                        <TableHead className="text-foreground">Moneda de Pago</TableHead>
                         <TableHead className="text-foreground">Estado</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -348,6 +354,7 @@ export default function Customers({ storeId, initialCustomers, saveCustomers }: 
                           <TableCell className="text-muted-foreground">{new Date(s.created_at).toLocaleDateString('es-CO')}</TableCell>
                           <TableCell className="text-foreground">{s.is_estimate ? 'Cotización' : 'Venta'}</TableCell>
                           <TableCell className="font-medium text-foreground">${formatAmount(s.total)}</TableCell>
+                          <TableCell>{<Badge variant="outline" className="border-primary text-primary font-mono">{getSelectedCurrency(s.currency_paid)}</Badge>}</TableCell>
                           <TableCell>{getStatusBadge(s)}</TableCell>
                         </TableRow>
                       ))}

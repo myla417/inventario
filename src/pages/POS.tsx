@@ -20,9 +20,10 @@ interface POSProps {
   paymentMethods: PaymentMethod[]
   exchangeRates: ExchangeRate[]
   storeName: string
+  saveCustomers: (customers: Customer[]) => void
 }
 
-export default function POS({ storeId, products, customers, paymentMethods, exchangeRates }: POSProps) {
+export default function POS({ storeId, products, customers, paymentMethods, exchangeRates, saveCustomers }: POSProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState<string>("")
@@ -193,7 +194,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
         p_discount: discount,
         p_tax: 0,
         p_total: total,
-        p_payment_method: pm?.name || '',
+        p_payment_method: pm?.name || paymentMethod,
         p_currency_paid: selectedCurrency,
         p_exchange_rate: exchangeRate,
         p_amount_paid: amountPaid,
@@ -217,6 +218,9 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
           return next
         })
         showSuccess(`Venta completada exitosamente`)
+        if (customer && paymentMethod == 'A credito') {
+          saveCustomers(customers.map(c => c.id === customer.id ? { ...c , balance: c.balance + total } : c))
+        }
         clearForm()
       }
     } catch (err) {
@@ -398,7 +402,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
                   {paymentMethods.map(pm => (
                     <SelectItem key={pm.id} value={pm.id}>{pm.name} ({pm.currency})</SelectItem>
                   ))}
-                  {selectedCustomer !== 'walk-in' && (<SelectItem value="A credito">A crédito</SelectItem>)}
+                  {selectedCustomer !== '' && selectedCustomer !== 'walk-in' && (<SelectItem value="A credito">A credito</SelectItem>)}
                 </SelectContent>
               </Select>
               <div className="w-24 flex items-center">

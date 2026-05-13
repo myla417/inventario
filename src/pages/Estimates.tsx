@@ -24,6 +24,7 @@ interface EstimatesProps {
   paymentMethods: PaymentMethod[]
   exchangeRates: ExchangeRate[]
   storeName: string
+  saveCustomers: (customers: Customer[]) => void
 }
 
 export default function Estimates({ storeId, storeName }: EstimatesProps) {
