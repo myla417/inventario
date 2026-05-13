@@ -398,6 +398,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
                   {paymentMethods.map(pm => (
                     <SelectItem key={pm.id} value={pm.id}>{pm.name} ({pm.currency})</SelectItem>
                   ))}
+                  {selectedCustomer !== 'walk-in' && (<SelectItem value="A credito">A crédito</SelectItem>)}
                 </SelectContent>
               </Select>
               <div className="w-24 flex items-center">
