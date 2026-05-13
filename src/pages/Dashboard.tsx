@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Plus, X, ChevronLeft, ChevronRight, Pencil } from "lucide-react"
+import { Plus, X, ChevronLeft, ChevronRight, Pencil, Calendar } from "lucide-react"
 import type { DashboardColumn } from "@/interfaces/data/DashboardTask"
 import { supabase } from "@/lib/supabase"
 
@@ -43,6 +43,7 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
   const [editTaskTitle, setEditTaskTitle] = useState('')
   const [editTaskDesc, setEditTaskDesc] = useState('')
   const [editTaskDueDate, setEditTaskDueDate] = useState('')
+  const [quickAddColumn, setQuickAddColumn] = useState<string | null>(null)
 
   const columns: ColumnItem[] = kanbanColumns.length === 0
     ? [
@@ -89,6 +90,37 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
       .eq('id', editingColumnId)
     setKanbanColumns(kanbanColumns.map(c => c.id === editingColumnId ? { ...c, name: editingColumnName } : c))
     setEditingColumnId(null)
+  }
+
+  const handleDoubleClickAdd = (colId: string) => {
+    if (!isAdmin) return
+    setQuickAddColumn(colId)
+  }
+
+  const quickAddTask = async () => {
+    if (!quickAddColumn || !newTaskTitle.trim() || !storeId) return
+    setSavingTask(true)
+    try {
+      const { data } = await supabase
+        .from('dashboard_tasks')
+        .insert({
+          store_id: storeId,
+          title: newTaskTitle.trim(),
+          description: '',
+          due_date: null,
+          column_id: quickAddColumn,
+          created_by: ''
+        })
+        .select()
+        .single()
+      if (data) {
+        setKanbanTasks([...kanbanTasks, data])
+        setQuickAddColumn(null)
+        setNewTaskTitle('')
+      }
+    } finally {
+      setSavingTask(false)
+    }
   }
 
   const addTask = async () => {
@@ -175,9 +207,9 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
         </Button>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 md:mx-0 md:px-0">
         {columns.map((col, colIndex) => (
-          <div key={col.id} className="flex-shrink-0 w-72 bg-muted/50 rounded-lg p-4">
+          <div key={col.id} className="flex-shrink-0 w-[85vw] sm:w-72 bg-muted/50 rounded-lg p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3">
               {editingColumnId === col.id ? (
                 <Input
@@ -190,7 +222,7 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
                 />
               ) : (
                 <h3
-                  className={`font-semibold text-foreground ${isAdmin ? 'cursor-pointer hover:text-primary' : ''}`}
+                  className={`font-semibold text-foreground text-sm sm:text-base ${isAdmin ? 'cursor-pointer hover:text-primary' : ''}`}
                   onClick={() => startEditColumn(col)}
                 >
                   {col.name}
@@ -200,75 +232,83 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
                 {col.tasks.length}
               </span>
             </div>
-            <div className="space-y-2 min-h-[200px]">
+            <div className="space-y-2 min-h-[150px] sm:min-h-[200px]">
               {col.tasks.map((task) => {
                   const isLastColumn = colIndex === columns.length - 1
                   return (
                     <div
                       key={task.id}
-                      className={`bg-card p-3 rounded-md text-sm border-2 ${isLastColumn ? 'border-green-500' : isUrgent(task.dueDate) ? 'border-red-500' :  'border-blue-500'}`}
+                      className={`bg-card p-3 sm:p-4 rounded-lg text-sm border-2 touch-manipulation ${isLastColumn ? 'border-green-500' : isUrgent(task.dueDate) ? 'border-red-500' :  'border-blue-500'}`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <span className="font-medium text-foreground">{task.title}</span>
+                        <span className="font-semibold text-foreground text-sm sm:text-base leading-tight">{task.title}</span>
                         {isAdmin && (
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <button
                               onClick={() => openEditTask(task)}
-                              className="text-muted-foreground hover:text-primary"
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent touch-manipulation"
                             >
-                              <Pencil className="h-3 w-3" />
+                              <Pencil className="h-3.5 w-3.5" />
                             </button>
                             <button
                               onClick={() => deleteTask(task.id)}
-                              className="text-muted-foreground hover:text-destructive"
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent touch-manipulation"
                             >
-                              <X className="h-3 w-3" />
+                              <X className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         )}
                       </div>
                       {task.description && (
-                        <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
+                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2 sm:line-clamp-none">{task.description}</p>
                       )}
-                      {task.dueDate && (
-                        <p className={`text-xs mt-2 border-t border-border pt-2 ${isUrgent(task.dueDate) && !isLastColumn ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-                          Vence: {new Date(task.dueDate).toLocaleDateString('es-CO')}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between mt-2 border-t border-border pt-2">
+                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50">
                         <button
                           onClick={() => moveTask(task, 'left')}
                           disabled={colIndex === 0}
-                          className="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed touch-manipulation"
+                          title="Mover a la izquierda"
                         >
-                          <ChevronLeft className="h-4 w-4" />
+                          <ChevronLeft className="h-5 w-5" />
                         </button>
+                        {task.dueDate && (
+                          <div className={`flex items-center gap-1.5 border-t border-border/50 ${isUrgent(task.dueDate) && !isLastColumn ? 'text-red-500' : 'text-muted-foreground'}`}>
+                            <Calendar className="h-3 w-3 flex-shrink-0" />
+                            <span className="text-xs font-medium">
+                              {new Date(task.dueDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
+                            </span>
+                          </div>
+                        )}
                         <button
                           onClick={() => moveTask(task, 'right')}
                           disabled={colIndex === columns.length - 1}
-                          className="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed touch-manipulation"
+                          title="Mover a la derecha"
                         >
-                          <ChevronRight className="h-4 w-4" />
+                          <ChevronRight className="h-5 w-5" />
                         </button>
                       </div>
                     </div>
                   )
                 })}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full mt-3 h-8"
-              onClick={() => setAddingTaskToColumn(col.id)}
-            >
-              <Plus className="h-3 w-3 mr-1" /> Agregar
-            </Button>
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full mt-3 h-10 sm:h-8 text-xs sm:text-sm"
+                onClick={() => setAddingTaskToColumn(col.id)}
+                onDoubleClick={() => handleDoubleClickAdd(col.id)}
+              >
+                <Plus className="h-4 w-4 mr-1 sm:mr-2" /> Agregar
+              </Button>
+            )}
           </div>
         ))}
       </div>
 
       <Dialog open={!!addingTaskToColumn} onOpenChange={() => setAddingTaskToColumn(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Nueva Tarea</DialogTitle>
           </DialogHeader>
@@ -277,13 +317,14 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
               placeholder="Título de la tarea"
               value={newTaskTitle}
               onChange={e => setNewTaskTitle(e.target.value)}
-              className="bg-input border-border"
+              className="bg-input border-border text-base"
+              autoFocus
             />
             <Textarea
               placeholder="Descripción (opcional)"
               value={newTaskDesc}
               onChange={e => setNewTaskDesc(e.target.value)}
-              className="bg-input border-border"
+              className="bg-input border-border min-h-[80px]"
             />
             <Input
               type="date"
@@ -292,9 +333,32 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
               className="bg-input border-border [appearance:none] [&::-webkit-calendar-picker-indicator]:invert"
             />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddingTaskToColumn(null)}>Cancelar</Button>
-            <Button onClick={addTask} disabled={savingTask || !newTaskTitle.trim()}>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setAddingTaskToColumn(null)} className="w-full sm:w-auto">Cancelar</Button>
+            <Button onClick={addTask} disabled={savingTask || !newTaskTitle.trim()} className="w-full sm:w-auto">
+              {savingTask ? 'Guardando...' : 'Agregar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!quickAddColumn} onOpenChange={() => setQuickAddColumn(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Agregar Tarea Rápido</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Título de la tarea"
+              value={newTaskTitle}
+              onChange={e => setNewTaskTitle(e.target.value)}
+              className="bg-input border-border text-base"
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setQuickAddColumn(null)} className="w-full sm:w-auto">Cancelar</Button>
+            <Button onClick={quickAddTask} disabled={savingTask || !newTaskTitle.trim()} className="w-full sm:w-auto">
               {savingTask ? 'Guardando...' : 'Agregar'}
             </Button>
           </DialogFooter>
@@ -302,7 +366,7 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
       </Dialog>
 
       <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Tarea</DialogTitle>
           </DialogHeader>
@@ -311,13 +375,13 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
               placeholder="Título de la tarea"
               value={editTaskTitle}
               onChange={e => setEditTaskTitle(e.target.value)}
-              className="bg-input border-border"
+              className="bg-input border-border text-base"
             />
             <Textarea
               placeholder="Descripción (opcional)"
               value={editTaskDesc}
               onChange={e => setEditTaskDesc(e.target.value)}
-              className="bg-input border-border"
+              className="bg-input border-border min-h-[80px]"
             />
             <Input
               type="date"
@@ -326,9 +390,9 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
               className="bg-input border-border [appearance:none] [&::-webkit-calendar-picker-indicator]:invert"
             />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingTask(null)}>Cancelar</Button>
-            <Button onClick={saveEditTask} disabled={savingTask || !editTaskTitle.trim()}>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setEditingTask(null)} className="w-full sm:w-auto">Cancelar</Button>
+            <Button onClick={saveEditTask} disabled={savingTask || !editTaskTitle.trim()} className="w-full sm:w-auto">
               {savingTask ? 'Guardando...' : 'Guardar'}
             </Button>
           </DialogFooter>
