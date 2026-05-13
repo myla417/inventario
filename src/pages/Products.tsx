@@ -17,13 +17,14 @@ import { supabase, supabaseRpcStockMovements } from "@/lib/supabase"
 
 interface ProductsProps {
   storeId: string
+  userRole: string
   initialProducts: Product[]
   initialCategories: Category[]
   saveProducts: (products: Product[]) => void
   saveCategories: (categories: Category[]) => void
 }
 
-export default function Products({ storeId, initialProducts, initialCategories, saveProducts, saveCategories }: ProductsProps) {
+export default function Products({ storeId, userRole, initialProducts, initialCategories, saveProducts, saveCategories }: ProductsProps) {
   const [products, setProducts] = useState<Product[]>(initialProducts)
   const [categories, setCategories] = useState<Category[]>(initialCategories)
   const [searchTerm, setSearchTerm] = useState("")
@@ -55,6 +56,8 @@ export default function Products({ storeId, initialProducts, initialCategories, 
     const matchesLowStock = !showLowStockOnly || p.current_stock <= p.min_stock
     return matchesSearch && matchesCategory && matchesLowStock
   })
+
+  const isAdmin = userRole === 'admin'
 
   const handleSaveProduct = async () => {
     if (savingProduct) return
@@ -383,10 +386,12 @@ export default function Products({ storeId, initialProducts, initialCategories, 
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Costo (COP)</Label>
-                      <Input type="number" step="0.01" value={newProduct.cost || ""} onChange={(e) => setNewProduct({ ...newProduct, cost: parseFloat(e.target.value) || 0 })} className="bg-input border-border" />
-                    </div>
+                    {isAdmin && (
+                      <div className="space-y-2">
+                        <Label>Costo (COP)</Label>
+                        <Input type="number" step="0.01" value={newProduct.cost || ""} onChange={(e) => setNewProduct({ ...newProduct, cost: parseFloat(e.target.value) || 0 })} className="bg-input border-border" />
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label>Precio Minorista</Label>
                       <Input type="number" step="0.01" value={newProduct.retail_price || ""} onChange={(e) => setNewProduct({ ...newProduct, retail_price: parseFloat(e.target.value) || 0 })} className="bg-input border-border" />
@@ -483,12 +488,16 @@ export default function Products({ storeId, initialProducts, initialCategories, 
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openMovementDialog(p, 'entry')} title="Entrada">
                             <ArrowDownToLine className="h-4 w-4 text-green-500" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openMovementDialog(p, 'exit')} title="Salida">
-                            <ArrowUpFromLine className="h-4 w-4 text-red-500" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openMovementDialog(p, 'adjustment')} title="Ajuste">
-                            <Settings2 className="h-4 w-4 text-primary" />
-                          </Button>
+                          {isAdmin && (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openMovementDialog(p, 'exit')} title="Salida">
+                                <ArrowUpFromLine className="h-4 w-4 text-red-500" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openMovementDialog(p, 'adjustment')} title="Ajuste">
+                                <Settings2 className="h-4 w-4 text-primary" />
+                              </Button>
+                            </>
+                          )}
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => handleEditProduct(p)} title="Editar">
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -672,23 +681,25 @@ export default function Products({ storeId, initialProducts, initialCategories, 
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>Tipo de Movimiento</Label>
-              <Select value={movementType} onValueChange={(v: 'entry' | 'exit' | 'adjustment') => {
-                setMovementType(v)
-                if (v === 'adjustment' && selectedProduct) setMovementQuantity(selectedProduct.current_stock)
-                else setMovementQuantity(0)
-              }}>
-                <SelectTrigger className="bg-input border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="entry">Entrada (+)</SelectItem>
-                  <SelectItem value="exit">Salida (-)</SelectItem>
-                  <SelectItem value="adjustment">Ajuste (Set)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {isAdmin && (
+              <div className="space-y-2">
+                <Label>Tipo de Movimiento</Label>
+                <Select value={movementType} onValueChange={(v: 'entry' | 'exit' | 'adjustment') => {
+                  setMovementType(v)
+                  if (v === 'adjustment' && selectedProduct) setMovementQuantity(selectedProduct.current_stock)
+                  else setMovementQuantity(0)
+                }}>
+                  <SelectTrigger className="bg-input border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="entry">Entrada (+)</SelectItem>
+                    <SelectItem value="exit">Salida (-)</SelectItem>
+                    <SelectItem value="adjustment">Ajuste (Set)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Cantidad</Label>
               <Input

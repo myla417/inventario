@@ -201,7 +201,7 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-foreground">Tareas</h2>
+        <h2 className="text-xl font-bold text-foreground">Tareas y Eventos</h2>
         <Button size="sm" onClick={() => setAddingTaskToColumn(columns[0]?.id || '')}>
           <Plus className="h-4 w-4 mr-1" /> Nueva Tarea
         </Button>

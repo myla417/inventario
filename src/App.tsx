@@ -207,7 +207,7 @@ function AppContext() {
           <Route path="/dashboard" element={<Dashboard storeId={storeSettings.id} userRole={userRole?.role || ''} kanbanColumns={kanbanColumns} kanbanTasks={kanbanTasks} setKanbanColumns={setKanbanColumns} setKanbanTasks={setKanbanTasks} />} />
           <Route path="/pos" element={<POS storeId={storeSettings.id} products={products} customers={customers} paymentMethods={paymentMethods} exchangeRates={exchangeRates} storeName={storeSettings.name} />} />
           <Route path="/estimates" element={<Estimates storeId={storeSettings.id} products={products} customers={customers} paymentMethods={paymentMethods} exchangeRates={exchangeRates} storeName={storeSettings.name} />} />
-          <Route path="/products" element={<Products storeId={storeSettings.id} initialProducts={products} initialCategories={categories} saveProducts={setProducts} saveCategories={setCategories} />} />
+          <Route path="/products" element={<Products storeId={storeSettings.id} userRole={userRole?.role || ''} initialProducts={products} initialCategories={categories} saveProducts={setProducts} saveCategories={setCategories} />} />
           <Route path="/sales" element={<Sales storeId={storeSettings.id} products={products} />} />
           <Route path="/customers" element={<Customers storeId={storeSettings.id} initialCustomers={customers} saveCustomers={setCustomers} />} />
           {/* <Route path="/expenses" element={<Expenses storeId={storeSettings.id} />} /> */}
