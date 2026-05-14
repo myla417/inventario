@@ -21,9 +21,10 @@ interface POSProps {
   exchangeRates: ExchangeRate[]
   storeName: string
   saveCustomers: (customers: Customer[]) => void
+  saveProducts: (products: Product[]) => void
 }
 
-export default function POS({ storeId, products, customers, paymentMethods, exchangeRates, saveCustomers }: POSProps) {
+export default function POS({ storeId, products, customers, paymentMethods, exchangeRates, saveCustomers, saveProducts }: POSProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState<string>("")
@@ -32,17 +33,12 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
   const [saving, setSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
-  const [stockOverrides, setStockOverrides] = useState<Map<string, number>>(new Map())
 
   const localProducts = useMemo(() => {
     const map = new Map<string, Product>()
     products.forEach(p => map.set(p.id, p))
-    stockOverrides.forEach((stock, id) => {
-      const product = map.get(id)
-      if (product) map.set(id, { ...product, current_stock: stock })
-    })
     return map
-  }, [products, stockOverrides])
+  }, [products])
 
   const rates: ExchangeRates = {
     USD: exchangeRates.find(r => r.currency === 'USD')?.rate_exchange || 3700,
@@ -209,14 +205,13 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
       }
 
       if (saleId) {
-        setStockOverrides(prev => {
-          const next = new Map(prev)
-          for (const item of cart) {
-            const current = next.get(item.product_id) ?? localProducts.get(item.product_id)?.current_stock ?? 0
-            next.set(item.product_id, current - item.quantity)
+        saveProducts(products.map(p => {
+          const cartItem = cart.find(c => c.product_id === p.id)
+          if (cartItem) {
+            return { ...p, current_stock: p.current_stock - cartItem.quantity }
           }
-          return next
-        })
+          return p
+        }))
         showSuccess(`Venta completada exitosamente`)
         if (customer && paymentMethod == 'A credito') {
           saveCustomers(customers.map(c => c.id === customer.id ? { ...c , balance: c.balance + total } : c))

@@ -298,8 +298,12 @@ BEGIN
       (v_item->>'quantity')::INTEGER, (v_item->>'unit_price')::NUMERIC,
       (v_item->>'cost')::NUMERIC, (v_item->>'is_wholesale')::BOOLEAN, (v_item->>'total')::NUMERIC);
 
-    -- Deduct stock only for completed sales (not estimates)
+    -- Validate stock before deducting
     IF NOT p_is_estimate THEN
+      IF (SELECT current_stock FROM products WHERE id = (v_item->>'product_id')::UUID) < (v_item->>'quantity')::INTEGER THEN
+        RAISE EXCEPTION 'Stock insuficiente para el producto: %', v_item->>'product_name';
+      END IF;
+
       UPDATE products SET current_stock = current_stock - (v_item->>'quantity')::INTEGER,
         updated_at = NOW()
       WHERE id = (v_item->>'product_id')::UUID;

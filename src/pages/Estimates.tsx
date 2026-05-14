@@ -26,9 +26,10 @@ interface EstimatesProps {
   exchangeRates: ExchangeRate[]
   storeName: string
   saveCustomers: (customers: Customer[]) => void
+  saveProducts: (products: Product[]) => void
 }
 
-export default function Estimates({ storeId, storeName, paymentMethods, customers, exchangeRates, saveCustomers }: EstimatesProps) {
+export default function Estimates({ storeId, storeName, products, paymentMethods, customers, exchangeRates, saveCustomers, saveProducts }: EstimatesProps) {
   const [estimates, setEstimates] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFrom, setDateFrom] = useState(() => {
@@ -211,6 +212,13 @@ export default function Estimates({ storeId, storeName, paymentMethods, customer
       }
 
       if (saleId) {
+        saveProducts(products.map(p => {
+          const soldItem = estimateItems.find(i => i.product_id === p.id)
+          if (soldItem) {
+            return { ...p, current_stock: p.current_stock - soldItem.quantity }
+          }
+          return p
+        }))
         const { error: updateError } = await supabase
           .from('sales')
           .update({ status: 'completed' })
