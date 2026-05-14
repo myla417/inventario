@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { FileText, Eye, Printer, ShoppingCart, X, Calendar, Search, CheckCircle, AlertCircle, MessageCircle } from "lucide-react"
 import html2canvas from "html2canvas"
 import { formatAmount } from "@/Utils.functions"
@@ -27,7 +28,7 @@ interface EstimatesProps {
   saveCustomers: (customers: Customer[]) => void
 }
 
-export default function Estimates({ storeId, storeName }: EstimatesProps) {
+export default function Estimates({ storeId, storeName, paymentMethods, customers, exchangeRates, saveCustomers }: EstimatesProps) {
   const [estimates, setEstimates] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFrom, setDateFrom] = useState(() => {
@@ -49,6 +50,9 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
   const [whatsappPreview, setWhatsappPreview] = useState<{ estimate: Sale; dataUrl: string } | null>(null)
   const [sharing, setSharing] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState<Sale | null>(null)
+  const [showConvertDialog, setShowConvertDialog] = useState(false)
+  const [convertPaymentMethod, setConvertPaymentMethod] = useState("")
+  const [keepExchangeRate, setKeepExchangeRate] = useState(false)
   const selectedEstimateRef = useRef<Sale | null>(null)
   const estimateItemsRef = useRef<SaleItem[]>([])
 
@@ -157,10 +161,23 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
     setTimeout(() => setErrorMessage(""), 5000)
   }
 
-  const handleConvertToSale = async () => {
+  const handleConvertToSale = () => {
+    if (!selectedEstimate) return
+    setConvertPaymentMethod(selectedEstimate.payment_method || paymentMethods.find(p => p.currency === selectedEstimate.currency_paid)?.id || "")
+    setKeepExchangeRate(true)
+    setShowConvertDialog(true)
+  }
+
+  const exchangeRate = keepExchangeRate
+        ? selectedEstimate?.exchange_rate
+        : (exchangeRates.find(r => r.currency === paymentMethods.find(p => p.id === convertPaymentMethod)?.currency)?.rate_exchange || selectedEstimate?.exchange_rate)
+
+  const totalValue = (selectedEstimate?.total || 1)  / (exchangeRate || 1)
+  const confirmConvertToSale = async () => {
     if (converting || !selectedEstimate) return
     setConverting(true)
     try {
+      const pm = paymentMethods.find(p => p.id === convertPaymentMethod)
       const itemsPayload = estimateItems.map(item => ({
         product_id: item.product_id,
         product_name: item.product_name,
@@ -179,10 +196,10 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
         p_discount: selectedEstimate.discount,
         p_tax: selectedEstimate.tax,
         p_total: selectedEstimate.total,
-        p_payment_method: '',
-        p_currency_paid: selectedEstimate.currency_paid,
-        p_exchange_rate: selectedEstimate.exchange_rate,
-        p_amount_paid: selectedEstimate.amount_paid,
+        p_payment_method: pm?.name || convertPaymentMethod,
+        p_currency_paid: pm?.currency || selectedEstimate.currency_paid,
+        p_exchange_rate: exchangeRate,
+        p_amount_paid: totalValue,
         p_is_estimate: false,
         p_estimate_number: null,
         p_items: itemsPayload,
@@ -204,6 +221,9 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
           return
         }
 
+        if (selectedEstimate.customer_id && convertPaymentMethod == 'A credito') {
+          saveCustomers(customers.map(c => c.id === selectedEstimate.customer_id ? { ...c , balance: c.balance + selectedEstimate.total } : c))
+        }
         showSuccess(`Cotización convertida a venta exitosamente`)
         setEstimates(estimates.map(e => e.id === selectedEstimate.id ? { ...e, status: 'completed' as const } : e))
         setSelectedEstimate(null)
@@ -214,6 +234,7 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
       console.error(err)
     } finally {
       setConverting(false)
+      setShowConvertDialog(false)
     }
   }
 
@@ -725,12 +746,6 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
               {printEstimate.tax > 0 && <p>Impuesto: ${formatAmount(printEstimate.tax)}</p>}
               <p className="text-xl font-bold">Total: {getCurrencySymbol(printEstimate.currency_paid)}{formatAmount(printEstimate.total)} {printEstimate.currency_paid}</p>
             </div>
-            <div className="mt-8 pt-4 border-t border-gray-300">
-              <p className="text-sm text-gray-600">Vigencia: 15 días</p>
-              <div className="mt-8 border-t border-black w-48 pt-1">
-                <p className="text-sm">Firma</p>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -807,6 +822,70 @@ export default function Estimates({ storeId, storeName }: EstimatesProps) {
               disabled={cancelling}
             >
               {cancelling ? 'Cancelando...' : 'Sí, cancelar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-primary" />
+              Convertir a Venta
+            </DialogTitle>
+            <DialogDescription>
+              Selecciona el método de pago para la venta
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-sm text-foreground">Método de pago</Label>
+              <Select value={convertPaymentMethod} onValueChange={setConvertPaymentMethod}>
+                <SelectTrigger className="bg-input border-border">
+                  <SelectValue placeholder="Seleccionar método" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentMethods.map(pm => (
+                    <SelectItem key={pm.id} value={pm.id}>{pm.name} ({pm.currency})</SelectItem>
+                  ))}
+                  {selectedEstimate && selectedEstimate?.customer_id !== '' && selectedEstimate?.customer_id !== 'walk-in' && (<SelectItem value="A credito">A credito</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {convertPaymentMethod && convertPaymentMethod !== 'A credito' && paymentMethods.find(p => p.id === convertPaymentMethod)?.currency !== 'COP' && (
+              <>
+                {selectedEstimate?.exchange_rate && selectedEstimate.exchange_rate > 1 && (
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="text-sm text-foreground">Mantener Tasa</Label>
+                      <p className="text-xs text-muted-foreground">Usar tasa de la cotización ({selectedEstimate?.exchange_rate})</p>
+                    </div>
+                    <Switch checked={keepExchangeRate} onCheckedChange={setKeepExchangeRate} />
+                  </div>
+                )}
+                <div className="flex justify-between text-primary font-medium">
+                  <span>Equivale</span>
+                  <span>{getCurrencySymbol(paymentMethods.find(p => p.id === convertPaymentMethod)?.currency || 'COP')}{formatAmount(totalValue)}</span>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-border"
+              onClick={() => setShowConvertDialog(false)}
+              disabled={converting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={confirmConvertToSale}
+              disabled={converting || !convertPaymentMethod}
+            >
+              {converting ? 'Convirtiendo...' : 'Confirmar'}
             </Button>
           </DialogFooter>
         </DialogContent>
