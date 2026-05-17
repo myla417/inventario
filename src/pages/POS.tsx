@@ -319,7 +319,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
               >
                 <Package className="h-8 w-8 text-primary mb-2" />
                 <span className="text-sm font-medium text-foreground truncate w-full text-center">{product.name}</span>
-                <span className="text-xs text-muted-foreground">{product.sku}</span>
+                <span className="text-xs text-muted-foreground">{product.sku} ({product.current_stock})</span>
                 <span className="text-sm font-bold text-primary mt-1">${formatAmount(product.retail_price)}</span>
               </button>
             ))}

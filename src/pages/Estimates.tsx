@@ -545,7 +545,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-medium text-foreground">
-                          {getCurrencySymbol(estimate.currency_paid)}{formatAmount(estimate.total)}
+                          ${formatAmount(estimate.total)}
                         </TableCell>
                         <TableCell>{getStatusBadge(estimate.status)}</TableCell>
                         <TableCell>

@@ -66,7 +66,6 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
           }))
       }))
 
-  const isAdmin = userRole === 'admin'
 
   const isUrgent = (dueDate: string | null) => {
     if (!dueDate) return false
@@ -77,7 +76,6 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
   }
 
   const startEditColumn = (col: ColumnItem) => {
-    if (!isAdmin) return
     setEditingColumnId(col.id)
     setEditingColumnName(col.name)
   }
@@ -93,7 +91,6 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
   }
 
   const handleDoubleClickAdd = (colId: string) => {
-    if (!isAdmin) return
     setQuickAddColumn(colId)
   }
 
@@ -222,7 +219,7 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
                 />
               ) : (
                 <h3
-                  className={`font-semibold text-foreground text-sm sm:text-base ${isAdmin ? 'cursor-pointer hover:text-primary' : ''}`}
+                  className={`font-semibold text-foreground text-sm sm:text-base cursor-pointer hover:text-primary`}
                   onClick={() => startEditColumn(col)}
                 >
                   {col.name}
@@ -242,22 +239,20 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
                     >
                       <div className="flex items-start justify-between gap-2">
                         <span className="font-semibold text-foreground text-sm sm:text-base leading-tight">{task.title}</span>
-                        {isAdmin && (
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <button
-                              onClick={() => openEditTask(task)}
-                              className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent touch-manipulation"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => deleteTask(task.id)}
-                              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent touch-manipulation"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => openEditTask(task)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent touch-manipulation"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteTask(task.id)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent touch-manipulation"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                       {task.description && (
                         <p className="text-xs text-muted-foreground mt-2 line-clamp-2 sm:line-clamp-none">{task.description}</p>
@@ -292,17 +287,15 @@ export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTask
                   )
                 })}
             </div>
-            {isAdmin && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full mt-3 h-10 sm:h-8 text-xs sm:text-sm"
-                onClick={() => setAddingTaskToColumn(col.id)}
-                onDoubleClick={() => handleDoubleClickAdd(col.id)}
-              >
-                <Plus className="h-4 w-4 mr-1 sm:mr-2" /> Agregar
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full mt-3 h-10 sm:h-8 text-xs sm:text-sm"
+              onClick={() => setAddingTaskToColumn(col.id)}
+              onDoubleClick={() => handleDoubleClickAdd(col.id)}
+            >
+              <Plus className="h-4 w-4 mr-1 sm:mr-2" /> Agregar
+            </Button>
           </div>
         ))}
       </div>
