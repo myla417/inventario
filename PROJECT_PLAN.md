@@ -1,4 +1,4 @@
-# Ferretería Pro - Inventario y Ventas
+# Concreto - Inventario y Ventas
 
 Sistema de inventario-ventas para una ferretería (hardware construction store). Gestiona catálogo de productos, inventario, punto de venta (POS), cotizaciones, clientes, proveedores, gastos y reportes. Desarrollado como MVP con tecnología moderna, alojado en Vercel y usando Supabase free tier.
 

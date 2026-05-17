@@ -1,4 +1,4 @@
--- Ferretería Pro - Database Schema
+-- Concreto - Database Schema
 -- Run this in Supabase SQL Editor to set up all tables
 
 -- Enable UUID extension
@@ -284,7 +284,17 @@ AS $$
 DECLARE
   v_sale_id UUID;
   v_item JSONB;
+  v_insufficient_stock TEXT;
 BEGIN
+  -- Validate stock for all items before inserting anything
+  IF NOT p_is_estimate THEN
+    FOR v_item IN SELECT * FROM jsonb_array_elements(p_items)
+    LOOP
+      IF (SELECT current_stock FROM products WHERE id = (v_item->>'product_id')::UUID) < (v_item->>'quantity')::INTEGER THEN
+        RAISE EXCEPTION 'Stock insuficiente para el producto: %', v_item->>'product_name';
+      END IF;
+    END LOOP;
+  END IF;
   INSERT INTO sales (store_id, customer_id, customer_name, subtotal, discount, tax, total,
     payment_method, currency_paid, exchange_rate, amount_paid, is_estimate, estimate_number, created_by)
   VALUES (p_store_id, p_customer_id, p_customer_name, p_subtotal, p_discount, p_tax, p_total,
@@ -298,12 +308,8 @@ BEGIN
       (v_item->>'quantity')::INTEGER, (v_item->>'unit_price')::NUMERIC,
       (v_item->>'cost')::NUMERIC, (v_item->>'is_wholesale')::BOOLEAN, (v_item->>'total')::NUMERIC);
 
-    -- Validate stock before deducting
+    -- Deduct stock only for completed sales (not estimates)
     IF NOT p_is_estimate THEN
-      IF (SELECT current_stock FROM products WHERE id = (v_item->>'product_id')::UUID) < (v_item->>'quantity')::INTEGER THEN
-        RAISE EXCEPTION 'Stock insuficiente para el producto: %', v_item->>'product_name';
-      END IF;
-
       UPDATE products SET current_stock = current_stock - (v_item->>'quantity')::INTEGER,
         updated_at = NOW()
       WHERE id = (v_item->>'product_id')::UUID;

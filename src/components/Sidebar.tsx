@@ -15,10 +15,10 @@ export default function Sidebar({ currentPage, onPageChange, menuItems }: Sideba
         <div className="flex items-center justify-between py-0.5">
           <div className="flex items-center gap-2">
             <div className="bg-primary p-2 rounded-lg">
-              <span className="text-black font-bold text-sm">FP</span>
+              <span className="text-black font-bold text-sm">C</span>
             </div>
             <div>
-              <h2 className="font-bold text-foreground text-sm">Ferretería Pro</h2>
+              <h2 className="font-bold text-foreground text-sm">Concreto</h2>
               <p className="text-xs text-muted-foreground">Sistema de Gestión</p>
             </div>
           </div>
@@ -51,8 +51,8 @@ export default function Sidebar({ currentPage, onPageChange, menuItems }: Sideba
 
       <div className="p-3 border-t border-border">
         <div className="text-xs text-muted-foreground text-center">
-          <p>Ferretería Pro v1.0</p>
-          <p>© 2025</p>
+          <p>Concreto v1.0</p>
+          <p>© 2026</p>
         </div>
       </div>
     </div>

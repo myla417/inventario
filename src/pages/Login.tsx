@@ -36,9 +36,9 @@ export default function Login({ onLogin }: LoginProps) {
       <Card className="w-full max-w-md bg-card border-border">
         <CardHeader className="text-center">
           <div className="mx-auto bg-primary p-3 rounded-lg w-fit">
-            <span className="text-black font-bold text-xl">FP</span>
+            <span className="text-black font-bold text-xl">C</span>
           </div>
-          <CardTitle className="text-2xl text-foreground mt-4">Ferretería Pro</CardTitle>
+          <CardTitle className="text-2xl text-foreground mt-4">Concreto</CardTitle>
           <CardDescription className="text-muted-foreground">Sistema de Gestión</CardDescription>
         </CardHeader>
         <CardContent>

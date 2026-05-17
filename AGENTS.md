@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Project Overview
-Ferretería Pro - Inventory & POS for a hardware store. UI in Spanish. Mobile-first dark theme.
+Concreto - Inventory & POS for a hardware store. UI in Spanish. Mobile-first dark theme.
 
 ## Tech Stack
 - React 19 + TypeScript + Vite 6
