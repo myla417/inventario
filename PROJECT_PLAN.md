@@ -471,11 +471,9 @@ ferreteria/
 | Function | Purpose |
 |----------|---------|
 | `get_store_settings(userid)` | Returns store row for the authenticated user |
-| `get_products(storeid)` | Returns products with category name |
 | `get_date_sales_summary(storeid, filterdate)` | Daily sales aggregates |
 | `get_stock_movements(storeid)` | Stock movement history |
 | `create_sale(...)` | Creates sale + items + deducts stock |
-| `delete_product(productid)` | Soft deletes a product |
 | `get_monthly_sales(storeid)` | Monthly revenue/profit trend |
 
 ## Implementation Order

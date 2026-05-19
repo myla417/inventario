@@ -46,11 +46,9 @@ Concreto - Inventory & POS for a hardware store. UI in Spanish. Mobile-first dar
 
 ## Supabase RPC Functions
 - `get_store_settings(userid)` - Returns store row for authenticated user
-- `get_products(storeid)` - Returns products with category name
 - `get_date_sales_summary(storeid, filterdate)` - Daily sales aggregates
 - `get_stock_movements(storeid)` - Stock movement history
 - `create_sale(...)` - Creates sale + items, deducts stock (except estimates)
-- `delete_product(productid)` - Soft deletes a product
 
 ## Key Implementation Notes
 - Estimates flow: POS "Cotizar" → saves with `is_estimate=true`, prints via html2canvas
