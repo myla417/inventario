@@ -9,7 +9,6 @@ import { supabase } from "@/lib/supabase"
 
 interface DashboardProps {
   storeId: string
-  userRole: string
   kanbanColumns: DashboardColumn[]
   kanbanTasks: any[]
   setKanbanColumns: (cols: DashboardColumn[]) => void
@@ -31,7 +30,7 @@ interface ColumnItem {
   tasks: TaskItem[]
 }
 
-export default function Dashboard({ storeId, userRole, kanbanColumns, kanbanTasks, setKanbanColumns, setKanbanTasks }: DashboardProps) {
+export default function Dashboard({ storeId, kanbanColumns, kanbanTasks, setKanbanColumns, setKanbanTasks }: DashboardProps) {
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null)
   const [editingColumnName, setEditingColumnName] = useState('')
   const [addingTaskToColumn, setAddingTaskToColumn] = useState<string | null>(null)
