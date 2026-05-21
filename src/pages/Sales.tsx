@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DollarSign, TrendingUp, ShoppingCart, Search, Calendar, Eye, Package, CreditCard, BarChart3 } from "lucide-react"
+import { DollarSign, TrendingUp, ShoppingCart, Search, Calendar, Eye, Package, CreditCard, BarChart3, Trash2 } from "lucide-react"
 import { formatAmount } from "@/Utils.functions"
 import type { Sale, SaleItem } from "@/interfaces/data/Sale"
 import type { Product } from "@/interfaces/data/Product"
@@ -56,6 +56,7 @@ export default function Sales({ storeId, userRole }: SalesProps) {
   const [loadingItems, setLoadingItems] = useState(false)
   const [allSaleItems, setAllSaleItems] = useState<SaleItem[]>([])
   const [loadingAggregates, setLoadingAggregates] = useState(false)
+  const [deletingSaleId, setDeletingSaleId] = useState<string | null>(null)
   const isAdmin = userRole === 'admin'
 
   const loadSales = async () => {
@@ -129,6 +130,22 @@ export default function Sales({ storeId, userRole }: SalesProps) {
     setSelectedSale(sale)
     setSaleItems([])
     loadSaleItems(sale.id)
+  }
+
+  const deleteSale = async (saleId: string) => {
+    if (!confirm('¿Está seguro de eliminar esta venta? Se revertirá el stock.')) return
+    setDeletingSaleId(saleId)
+    try {
+      const { error } = await supabase.rpc('delete_sale', { p_sale_id: saleId })
+      if (error) throw error
+      await loadSales()
+      setSelectedSale(null)
+    } catch (err) {
+      console.error('Error deleting sale:', err)
+      alert('Error al eliminar la venta: ' + (err as Error).message)
+    } finally {
+      setDeletingSaleId(null)
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -361,11 +378,22 @@ export default function Sales({ storeId, userRole }: SalesProps) {
                               <div className="mt-1">{getStatusBadge(sale.status)}</div>
                             </div>
                           </div>
-                          <div className="mt-3 flex justify-end">
+                          <div className="mt-3 flex justify-end gap-2">
                             <Button variant="ghost" size="sm" className="text-primary" onClick={() => openSaleDetail(sale)}>
                               <Eye className="h-4 w-4 mr-1" />
-                              Ver detalle
+                              Ver
                             </Button>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-400"
+                                onClick={() => deleteSale(sale.id)}
+                                disabled={deletingSaleId === sale.id}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -409,6 +437,17 @@ export default function Sales({ storeId, userRole }: SalesProps) {
                                 <Eye className="h-4 w-4 mr-1" />
                                 Ver
                               </Button>
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-400"
+                                  onClick={() => deleteSale(sale.id)}
+                                  disabled={deletingSaleId === sale.id}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
