@@ -141,13 +141,13 @@ export default function Sales({ storeId, userRole, products, customers, saveProd
     if (!confirmDelete) return
     setDeletingSaleId(confirmDelete.id)
     try {
-      const { error } = await supabase.rpc('delete_sale', { p_sale_id: confirmDelete.id })
-      if (error) throw error
-
       const { data: saleItemsData } = await supabase
         .from('sale_items')
         .select('*')
         .eq('sale_id', confirmDelete.id)
+
+      const { error } = await supabase.rpc('delete_sale', { p_sale_id: confirmDelete.id })
+      if (error) throw error
 
       if (saleItemsData) {
         saveProducts(products.map((p: Product) => {
