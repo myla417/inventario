@@ -57,7 +57,6 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
   const selectedEstimateRef = useRef<Sale | null>(null)
   const estimateItemsRef = useRef<SaleItem[]>([])
   const [client, setClient] = useState<string>("")
-  const [showBankRefDialog, setShowBankRefDialog] = useState(false)
   const [bankReference, setBankReference] = useState("")
   const [bankReferenceName, setBankReferenceName] = useState("")
 
@@ -173,20 +172,13 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
   const handleConvertToSale = () => {
     if (!selectedEstimate) return
     setConvertPaymentMethod(selectedEstimate.payment_method || paymentMethods.find(p => p.currency === selectedEstimate.currency_paid)?.id || "")
-    setKeepExchangeRate(true)
-    const pm = paymentMethods.find(p => p.id === convertPaymentMethod)
-    const pmName = pm?.name || convertPaymentMethod || ''
-    const needsBankRef = pmName === 'Transferencia' || pmName === 'Pago Movil' || pmName === 'Zelle'
-    if (needsBankRef) {
-      setShowBankRefDialog(true)
-    } else {
-      setShowConvertDialog(true)
-    }
+    setKeepExchangeRate(false)
+    setShowConvertDialog(true)
   }
-
+  const actualCurrency = paymentMethods.find(p => p.id === convertPaymentMethod)?.currency
   const exchangeRate = keepExchangeRate
         ? selectedEstimate?.exchange_rate
-        : (exchangeRates.find(r => r.currency === paymentMethods.find(p => p.id === convertPaymentMethod)?.currency)?.rate_exchange || selectedEstimate?.exchange_rate)
+        : (exchangeRates.find(r => r.currency === actualCurrency)?.rate_exchange || selectedEstimate?.exchange_rate)
 
   const totalValue = (selectedEstimate?.total || 1)  / (exchangeRate || 1)
   const confirmConvertToSale = async () => {
@@ -901,7 +893,36 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
                 </SelectContent>
               </Select>
             </div>
-            {convertPaymentMethod && convertPaymentMethod !== 'A credito' && paymentMethods.find(p => p.id === convertPaymentMethod)?.currency !== 'COP' && (
+            {convertPaymentMethod && convertPaymentMethod !== 'A credito' && (
+              (() => {
+                const pm = paymentMethods.find(p => p.id === convertPaymentMethod)
+                const pmName = pm?.name || convertPaymentMethod
+                const needsBankRef = pmName === 'Transferencia' || pmName === 'Pago Movil' || pmName === 'Zelle'
+                return needsBankRef ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-foreground">Nombre</Label>
+                      <Input
+                        value={bankReferenceName}
+                        onChange={(e) => setBankReferenceName(e.target.value)}
+                        placeholder="Nombre del usuario"
+                        className="bg-input border-border"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-foreground">Referencia</Label>
+                      <Input
+                        value={bankReference}
+                        onChange={(e) => setBankReference(e.target.value)}
+                        placeholder="Número de transferencia"
+                        className="bg-input border-border"
+                      />
+                    </div>
+                  </>
+                ) : null
+              })()
+            )}
+            {convertPaymentMethod && convertPaymentMethod !== 'A credito' && actualCurrency !== 'COP' && (
               <>
                 {selectedEstimate?.exchange_rate && selectedEstimate.exchange_rate > 1 && (
                   <div className="flex items-center justify-between">
@@ -914,7 +935,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
                 )}
                 <div className="flex justify-between text-primary font-medium">
                   <span>Equivale</span>
-                  <span>{getCurrencySymbol(paymentMethods.find(p => p.id === convertPaymentMethod)?.currency || 'COP')}{formatAmount(totalValue)}</span>
+                  <span>{getCurrencySymbol(actualCurrency || 'COP')}{formatAmount(totalValue)}</span>
                 </div>
               </>
             )}
@@ -934,63 +955,6 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
               disabled={converting || !convertPaymentMethod}
             >
               {converting ? 'Convirtiendo...' : 'Confirmar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showBankRefDialog} onOpenChange={setShowBankRefDialog}>
-        <DialogContent className="bg-card border-border max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-foreground flex items-center gap-2">
-              <span className="text-primary">Referencia Bancaria</span>
-            </DialogTitle>
-            <DialogDescription>
-              Ingresa los datos de transferencia para registrar la venta
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label className="text-sm text-foreground">Nombre del banco</Label>
-              <Input
-                value={bankReferenceName}
-                onChange={(e) => setBankReferenceName(e.target.value)}
-                placeholder="Banco de Venezuela, Mercantil, etc."
-                className="bg-input border-border"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm text-foreground">Referencia</Label>
-              <Input
-                value={bankReference}
-                onChange={(e) => setBankReference(e.target.value)}
-                placeholder="Últimos 4 dígitos o número de transferencia"
-                className="bg-input border-border"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="border-border"
-              onClick={() => {
-                setShowBankRefDialog(false)
-                setBankReference("")
-                setBankReferenceName("")
-              }}
-              disabled={converting}
-            >
-              Cancelar
-            </Button>
-            <Button
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              onClick={() => {
-                setShowBankRefDialog(false)
-                setShowConvertDialog(true)
-              }}
-              disabled={converting}
-            >
-              Continuar
             </Button>
           </DialogFooter>
         </DialogContent>

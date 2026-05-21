@@ -497,11 +497,11 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-sm text-foreground">Nombre del banco</Label>
+              <Label className="text-sm text-foreground">Nombre</Label>
               <Input
                 value={bankReferenceName}
                 onChange={(e) => setBankReferenceName(e.target.value)}
-                placeholder="Banco de Venezuela, Mercantil, etc."
+                placeholder="Nombre del usuario"
                 className="bg-input border-border"
               />
             </div>
@@ -510,7 +510,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
               <Input
                 value={bankReference}
                 onChange={(e) => setBankReference(e.target.value)}
-                placeholder="Últimos 4 dígitos o número de transferencia"
+                placeholder="Número de transferencia"
                 className="bg-input border-border"
               />
             </div>
