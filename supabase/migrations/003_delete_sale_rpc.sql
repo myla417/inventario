@@ -1,4 +1,4 @@
--- Delete sale and revert stock (for admin error/cashback cases)
+-- Update delete_sale function to also reverse credit balance
 CREATE OR REPLACE FUNCTION delete_sale(p_sale_id UUID)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
@@ -35,6 +35,13 @@ BEGIN
         'Reverso de venta',
         'sale', p_sale_id, public.username();
   END LOOP;
+
+  -- Reverse credit balance if it was a credit sale
+  IF v_sale.payment_method = 'A credito' AND v_sale.customer_id IS NOT NULL THEN
+    UPDATE customers
+    SET balance = balance - v_sale.total
+    WHERE id = v_sale.customer_id;
+  END IF;
 
   -- Delete sale items
   DELETE FROM sale_items WHERE sale_id = p_sale_id;

@@ -11,6 +11,7 @@ import { DollarSign, TrendingUp, ShoppingCart, Search, Calendar, Eye, Package, C
 import { formatAmount } from "@/Utils.functions"
 import type { Sale, SaleItem } from "@/interfaces/data/Sale"
 import type { Product } from "@/interfaces/data/Product"
+import type { Customer } from "@/interfaces/data/Customer"
 import { supabase } from "@/lib/supabase"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts"
 
@@ -18,6 +19,9 @@ interface SalesProps {
   storeId: string
   userRole: string
   products: Product[]
+  customers: Customer[]
+  saveProducts: (products: Product[]) => void
+  saveCustomers: (customers: Customer[]) => void
 }
 
 interface ProductSales {
@@ -42,7 +46,7 @@ interface DailySales {
 
 const CHART_COLORS = ['#FCC90F', '#22c55e', '#3b82f6', '#ef4444', '#a855f7', '#f97316', '#06b6d4']
 
-export default function Sales({ storeId, userRole }: SalesProps) {
+export default function Sales({ storeId, userRole, products, customers, saveProducts, saveCustomers }: SalesProps) {
   const [sales, setSales] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFrom, setDateFrom] = useState(() => {
@@ -139,7 +143,27 @@ export default function Sales({ storeId, userRole }: SalesProps) {
     try {
       const { error } = await supabase.rpc('delete_sale', { p_sale_id: confirmDelete.id })
       if (error) throw error
-      await loadSales()
+
+      const { data: saleItemsData } = await supabase
+        .from('sale_items')
+        .select('*')
+        .eq('sale_id', confirmDelete.id)
+
+      if (saleItemsData) {
+        saveProducts(products.map((p: Product) => {
+          const soldItem = saleItemsData.find((i: SaleItem) => i.product_id === p.id)
+          if (soldItem) {
+            return { ...p, current_stock: p.current_stock + soldItem.quantity }
+          }
+          return p
+        }))
+      }
+
+      if (confirmDelete.customer_id && confirmDelete.payment_method === 'A credito') {
+        saveCustomers(customers.map((c: Customer) => c.id === confirmDelete.customer_id ? { ...c, balance: c.balance - confirmDelete.total } : c))
+      }
+
+      setSales(sales.filter(s => s.id !== confirmDelete.id))
       setConfirmDelete(null)
     } catch (err) {
       console.error('Error deleting sale:', err)
