@@ -857,7 +857,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {(!client || client === '' || client === 'walk-in')  && (
+            {(!selectedEstimate?.customer_id || selectedEstimate?.customer_id === '' || selectedEstimate?.customer_id === 'walk-in')  && (
               <div className="space-y-2">
                 <Label className="text-sm text-foreground">Cliente</Label>
                 <Select value={client} onValueChange={setClient}>
