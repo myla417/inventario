@@ -57,6 +57,9 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
   const selectedEstimateRef = useRef<Sale | null>(null)
   const estimateItemsRef = useRef<SaleItem[]>([])
   const [client, setClient] = useState<string>("")
+  const [showBankRefDialog, setShowBankRefDialog] = useState(false)
+  const [bankReference, setBankReference] = useState("")
+  const [bankReferenceName, setBankReferenceName] = useState("")
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -171,7 +174,14 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
     if (!selectedEstimate) return
     setConvertPaymentMethod(selectedEstimate.payment_method || paymentMethods.find(p => p.currency === selectedEstimate.currency_paid)?.id || "")
     setKeepExchangeRate(true)
-    setShowConvertDialog(true)
+    const pm = paymentMethods.find(p => p.id === convertPaymentMethod)
+    const pmName = pm?.name || convertPaymentMethod || ''
+    const needsBankRef = pmName === 'Transferencia' || pmName === 'Pago Movil' || pmName === 'Zelle'
+    if (needsBankRef) {
+      setShowBankRefDialog(true)
+    } else {
+      setShowConvertDialog(true)
+    }
   }
 
   const exchangeRate = keepExchangeRate
@@ -212,6 +222,8 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
         p_amount_paid: totalValue,
         p_is_estimate: false,
         p_estimate_number: null,
+        p_bank_reference: bankReference || null,
+        p_bank_reference_name: bankReferenceName || null,
         p_items: itemsPayload,
       })
 
@@ -245,6 +257,8 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
         setEstimates(estimates.map(e => e.id === selectedEstimate.id ? { ...e, status: 'completed' as const } : e))
         setSelectedEstimate(null)
         setEstimateItems([])
+        setBankReference("")
+        setBankReferenceName("")
       }
     } catch (err) {
       showError("Error inesperado al convertir la cotización")
@@ -920,6 +934,63 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
               disabled={converting || !convertPaymentMethod}
             >
               {converting ? 'Convirtiendo...' : 'Confirmar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBankRefDialog} onOpenChange={setShowBankRefDialog}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <span className="text-primary">Referencia Bancaria</span>
+            </DialogTitle>
+            <DialogDescription>
+              Ingresa los datos de transferencia para registrar la venta
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-sm text-foreground">Nombre del banco</Label>
+              <Input
+                value={bankReferenceName}
+                onChange={(e) => setBankReferenceName(e.target.value)}
+                placeholder="Banco de Venezuela, Mercantil, etc."
+                className="bg-input border-border"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-foreground">Referencia</Label>
+              <Input
+                value={bankReference}
+                onChange={(e) => setBankReference(e.target.value)}
+                placeholder="Últimos 4 dígitos o número de transferencia"
+                className="bg-input border-border"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-border"
+              onClick={() => {
+                setShowBankRefDialog(false)
+                setBankReference("")
+                setBankReferenceName("")
+              }}
+              disabled={converting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={() => {
+                setShowBankRefDialog(false)
+                setShowConvertDialog(true)
+              }}
+              disabled={converting}
+            >
+              Continuar
             </Button>
           </DialogFooter>
         </DialogContent>

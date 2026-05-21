@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Search, Plus, Minus, ShoppingCart, FileText, X, Package, CheckCircle, AlertCircle } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import type { CartItem } from "@/interfaces/data/Sale"
 import type { Product } from "@/interfaces/data/Product"
 import type { Customer } from "@/interfaces/data/Customer"
@@ -33,6 +35,9 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
   const [saving, setSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
+  const [showBankRefDialog, setShowBankRefDialog] = useState(false)
+  const [bankReference, setBankReference] = useState("")
+  const [bankReferenceName, setBankReferenceName] = useState("")
 
   const localProducts = useMemo(() => {
     const map = new Map<string, Product>()
@@ -162,9 +167,21 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
       return
     }
 
+    const pm = paymentMethods.find(p => p.id === paymentMethod)
+    const pmName = pm?.name || paymentMethod
+    const needsBankRef = pmName === 'Transferencia' || pmName === 'Pago Movil' || pmName === 'Zelle'
+
+    if (needsBankRef) {
+      setShowBankRefDialog(true)
+      return
+    }
+
+    await confirmCheckout(pmName)
+  }
+
+  const confirmCheckout = async (pmName: string) => {
     setSaving(true)
     try {
-      const pm = paymentMethods.find(p => p.id === paymentMethod)
       const customer = selectedCustomer && selectedCustomer !== 'walk-in'
         ? customers.find(c => c.id === selectedCustomer)
         : null
@@ -190,12 +207,14 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
         p_discount: discount,
         p_tax: 0,
         p_total: total,
-        p_payment_method: pm?.name || paymentMethod,
+        p_payment_method: pmName,
         p_currency_paid: selectedCurrency,
         p_exchange_rate: exchangeRate,
         p_amount_paid: amountPaid,
         p_is_estimate: false,
         p_estimate_number: null,
+        p_bank_reference: bankReference || null,
+        p_bank_reference_name: bankReferenceName || null,
         p_items: itemsPayload,
       })
 
@@ -217,6 +236,8 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
           saveCustomers(customers.map(c => c.id === customer.id ? { ...c , balance: c.balance + total } : c))
         }
         clearForm()
+        setBankReference("")
+        setBankReferenceName("")
       }
     } catch (err) {
       showError("Error inesperado al procesar la venta")
@@ -463,6 +484,65 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
           </div>
         </div>
       </div>
+
+      <Dialog open={showBankRefDialog} onOpenChange={setShowBankRefDialog}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <span className="text-primary">Referencia Bancaria</span>
+            </DialogTitle>
+            <DialogDescription>
+              Ingresa los datos de transferencia para registrar la venta
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-sm text-foreground">Nombre del banco</Label>
+              <Input
+                value={bankReferenceName}
+                onChange={(e) => setBankReferenceName(e.target.value)}
+                placeholder="Banco de Venezuela, Mercantil, etc."
+                className="bg-input border-border"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-foreground">Referencia</Label>
+              <Input
+                value={bankReference}
+                onChange={(e) => setBankReference(e.target.value)}
+                placeholder="Últimos 4 dígitos o número de transferencia"
+                className="bg-input border-border"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-border"
+              onClick={() => {
+                setShowBankRefDialog(false)
+                setBankReference("")
+                setBankReferenceName("")
+              }}
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={() => {
+                setShowBankRefDialog(false)
+                const pm = paymentMethods.find(p => p.id === paymentMethod)
+                const pmName = pm?.name || paymentMethod
+                confirmCheckout(pmName)
+              }}
+              disabled={saving}
+            >
+              {saving ? 'Procesando...' : 'Confirmar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

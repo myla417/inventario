@@ -17,6 +17,8 @@ export interface Sale {
   paid: boolean
   created_at: string
   created_by: string
+  bank_reference?: string | null
+  bank_reference_name?: string | null
   items?: SaleItem[]
 }
 

@@ -5,9 +5,9 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DollarSign, TrendingUp, ShoppingCart, Search, Calendar, Eye, Package, CreditCard, BarChart3, Trash2 } from "lucide-react"
+import { DollarSign, TrendingUp, ShoppingCart, Search, Calendar, Eye, Package, CreditCard, BarChart3, Trash2, AlertCircle } from "lucide-react"
 import { formatAmount } from "@/Utils.functions"
 import type { Sale, SaleItem } from "@/interfaces/data/Sale"
 import type { Product } from "@/interfaces/data/Product"
@@ -57,6 +57,7 @@ export default function Sales({ storeId, userRole }: SalesProps) {
   const [allSaleItems, setAllSaleItems] = useState<SaleItem[]>([])
   const [loadingAggregates, setLoadingAggregates] = useState(false)
   const [deletingSaleId, setDeletingSaleId] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<Sale | null>(null)
   const isAdmin = userRole === 'admin'
 
   const loadSales = async () => {
@@ -132,14 +133,14 @@ export default function Sales({ storeId, userRole }: SalesProps) {
     loadSaleItems(sale.id)
   }
 
-  const deleteSale = async (saleId: string) => {
-    if (!confirm('¿Está seguro de eliminar esta venta? Se revertirá el stock.')) return
-    setDeletingSaleId(saleId)
+  const deleteSale = async () => {
+    if (!confirmDelete) return
+    setDeletingSaleId(confirmDelete.id)
     try {
-      const { error } = await supabase.rpc('delete_sale', { p_sale_id: saleId })
+      const { error } = await supabase.rpc('delete_sale', { p_sale_id: confirmDelete.id })
       if (error) throw error
       await loadSales()
-      setSelectedSale(null)
+      setConfirmDelete(null)
     } catch (err) {
       console.error('Error deleting sale:', err)
       alert('Error al eliminar la venta: ' + (err as Error).message)
@@ -388,7 +389,7 @@ export default function Sales({ storeId, userRole }: SalesProps) {
                                 variant="ghost"
                                 size="sm"
                                 className="text-red-500 hover:text-red-400"
-                                onClick={() => deleteSale(sale.id)}
+                                onClick={() => setConfirmDelete(sale)}
                                 disabled={deletingSaleId === sale.id}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -442,7 +443,7 @@ export default function Sales({ storeId, userRole }: SalesProps) {
                                   variant="ghost"
                                   size="sm"
                                   className="text-red-500 hover:text-red-400"
-                                  onClick={() => deleteSale(sale.id)}
+                                  onClick={() => setConfirmDelete(sale)}
                                   disabled={deletingSaleId === sale.id}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -801,6 +802,37 @@ export default function Sales({ storeId, userRole }: SalesProps) {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!confirmDelete} onOpenChange={() => !deletingSaleId && setConfirmDelete(null)}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              Eliminar Venta
+            </DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de eliminar la venta del {confirmDelete && new Date(confirmDelete.created_at).toLocaleDateString('es-CO')}? El stock será revertido y esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-border"
+              onClick={() => setConfirmDelete(null)}
+              disabled={!!deletingSaleId}
+            >
+              No, mantener
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={deleteSale}
+              disabled={!!deletingSaleId}
+            >
+              {deletingSaleId ? 'Eliminando...' : 'Sí, eliminar'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
