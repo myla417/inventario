@@ -174,7 +174,7 @@ function AppContext() {
     { id: "/pos", label: "Ventas", icon: ShoppingCart },
     { id: "/estimates", label: "Cotizaciones", icon: FileText },
     { id: "/sales", label: "Reportes", icon: DollarSign },
-    { id: "/products", label: "Productos", icon: Package },
+    { id: "/products", label: "Inventario", icon: Package },
     { id: "/customers", label: "Clientes", icon: Users },
     // { id: "/expenses", label: "Gastos", icon: Receipt },
     { id: "/settings", label: "Configuración", icon: Settings },
@@ -184,7 +184,8 @@ function AppContext() {
     { id: "/dashboard", label: "Inicio", icon: BarChart3 },
     { id: "/pos", label: "Ventas", icon: ShoppingCart },
     { id: "/estimates", label: "Cotizaciones", icon: FileText },
-    { id: "/products", label: "Productos", icon: Package },
+    { id: "/sales", label: "Reportes", icon: DollarSign },
+    { id: "/products", label: "Inventario", icon: Package },
     { id: "/customers", label: "Clientes", icon: Users },
   ]
 
@@ -208,7 +209,7 @@ function AppContext() {
           <Route path="/pos" element={<POS storeId={storeSettings.id} products={products} customers={customers} saveCustomers={setCustomers} saveProducts={setProducts} paymentMethods={paymentMethods} exchangeRates={exchangeRates} storeName={storeSettings.name} />} />
           <Route path="/estimates" element={<Estimates storeId={storeSettings.id} products={products} customers={customers} saveCustomers={setCustomers} saveProducts={setProducts} paymentMethods={paymentMethods} exchangeRates={exchangeRates} storeName={storeSettings.name} />} />
           <Route path="/products" element={<Products storeId={storeSettings.id} userRole={userRole?.role || ''} initialProducts={products} initialCategories={categories} saveProducts={setProducts} saveCategories={setCategories} />} />
-          <Route path="/sales" element={<Sales storeId={storeSettings.id} products={products} />} />
+          <Route path="/sales" element={<Sales storeId={storeSettings.id} userRole={userRole?.role || ''} products={products} />} />
           <Route path="/customers" element={<Customers storeId={storeSettings.id} userRole={userRole?.role || ''} initialCustomers={customers} paymentMethods={paymentMethods} saveCustomers={setCustomers} />} />
           {/* <Route path="/expenses" element={<Expenses storeId={storeSettings.id} />} /> */}
           <Route path="/settings" element={<SettingsPage storeId={storeSettings.id} initialStore={storeSettings} initialPaymentMethods={paymentMethods} initialExchangeRates={exchangeRates} saveStore={setStoreSettings} savePaymentMethods={setPaymentMethods} />} />

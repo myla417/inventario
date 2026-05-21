@@ -16,6 +16,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 interface SalesProps {
   storeId: string
+  userRole: string
   products: Product[]
 }
 
@@ -41,7 +42,7 @@ interface DailySales {
 
 const CHART_COLORS = ['#FCC90F', '#22c55e', '#3b82f6', '#ef4444', '#a855f7', '#f97316', '#06b6d4']
 
-export default function Sales({ storeId }: SalesProps) {
+export default function Sales({ storeId, userRole }: SalesProps) {
   const [sales, setSales] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFrom, setDateFrom] = useState(() => {
@@ -55,6 +56,7 @@ export default function Sales({ storeId }: SalesProps) {
   const [loadingItems, setLoadingItems] = useState(false)
   const [allSaleItems, setAllSaleItems] = useState<SaleItem[]>([])
   const [loadingAggregates, setLoadingAggregates] = useState(false)
+  const isAdmin = userRole === 'admin'
 
   const loadSales = async () => {
     if (!storeId) return
@@ -214,7 +216,7 @@ export default function Sales({ storeId }: SalesProps) {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className={"grid grid-cols-2 sm:grid-cols-2 gap-4 md:gap-6 " + (isAdmin ? "lg:grid-cols-4" : "lg:grid-cols-2")}>
         <Card className="border-border bg-card/50 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-foreground">Total Ventas</CardTitle>
@@ -226,16 +228,18 @@ export default function Sales({ storeId }: SalesProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-border bg-card/50 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-foreground">Ganancias</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">${formatAmount(totalProfit)}</div>
-            <p className="text-xs text-muted-foreground">Ganancia estimada</p>
-          </CardContent>
-        </Card>
+        {isAdmin && (
+          <Card className="border-border bg-card/50 backdrop-blur-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-foreground">Ganancias</CardTitle>
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">${formatAmount(totalProfit)}</div>
+              <p className="text-xs text-muted-foreground">Ganancia estimada</p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-border bg-card/50 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -248,16 +252,18 @@ export default function Sales({ storeId }: SalesProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-border bg-card/50 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-foreground">Promedio por Venta</CardTitle>
-            <DollarSign className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">${formatAmount(totalCompleted > 0 ? totalRevenue / totalCompleted : 0)}</div>
-            <p className="text-xs text-muted-foreground">Por venta completada</p>
-          </CardContent>
-        </Card>
+        {isAdmin && (
+          <Card className="border-border bg-card/50 backdrop-blur-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-foreground">Promedio por Venta</CardTitle>
+              <DollarSign className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">${formatAmount(totalCompleted > 0 ? totalRevenue / totalCompleted : 0)}</div>
+              <p className="text-xs text-muted-foreground">Por venta completada</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Card className="border-border bg-card/50 backdrop-blur-sm">
@@ -298,24 +304,28 @@ export default function Sales({ storeId }: SalesProps) {
       </Card>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-card border border-border h-auto gap-1 p-1">
-          <TabsTrigger value="general" className="flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4" />
-            <span className="hidden sm:inline">General</span>
-          </TabsTrigger>
-          <TabsTrigger value="products" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            <span className="hidden sm:inline">Por Producto</span>
-          </TabsTrigger>
-          <TabsTrigger value="payments" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            <span className="hidden sm:inline">Por Pago</span>
-          </TabsTrigger>
-          <TabsTrigger value="trend" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Tendencia</span>
-          </TabsTrigger>
-        </TabsList>
+        {isAdmin && (
+          <TabsList className={"grid w-full bg-card border border-border h-auto gap-1 p-1" + (isAdmin ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-1")}>
+            <TabsTrigger value="general" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden sm:inline">General</span>
+            </TabsTrigger>
+              <>
+                <TabsTrigger value="products" className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  <span className="hidden sm:inline">Por Producto</span>
+                </TabsTrigger>
+                <TabsTrigger value="payments" className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  <span className="hidden sm:inline">Por Pago</span>
+                </TabsTrigger>
+                <TabsTrigger value="trend" className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Tendencia</span>
+                </TabsTrigger>
+              </>
+          </TabsList>
+        )}
 
         <TabsContent value="general" className="space-y-4">
           <Card className="border-border bg-card/50 backdrop-blur-sm">
@@ -371,7 +381,7 @@ export default function Sales({ storeId }: SalesProps) {
                           <TableHead className="text-foreground">Método de Pago</TableHead>
                           <TableHead className="text-foreground">Moneda</TableHead>
                           <TableHead className="text-foreground text-right">Total</TableHead>
-                          <TableHead className="text-foreground">Estado</TableHead>
+                          {/* <TableHead className="text-foreground">Estado</TableHead> */}
                           <TableHead className="text-foreground">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -393,7 +403,7 @@ export default function Sales({ storeId }: SalesProps) {
                             <TableCell className="text-right font-medium text-foreground">
                               ${formatAmount(sale.total)}
                             </TableCell>
-                            <TableCell>{getStatusBadge(sale.status)}</TableCell>
+                            {/* <TableCell>{getStatusBadge(sale.status)}</TableCell> */}
                             <TableCell>
                               <Button variant="ghost" size="sm" className="text-primary" onClick={() => openSaleDetail(sale)}>
                                 <Eye className="h-4 w-4 mr-1" />

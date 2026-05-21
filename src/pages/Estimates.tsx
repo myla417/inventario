@@ -56,6 +56,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
   const [keepExchangeRate, setKeepExchangeRate] = useState(false)
   const selectedEstimateRef = useRef<Sale | null>(null)
   const estimateItemsRef = useRef<SaleItem[]>([])
+  const [client, setClient] = useState<string>("")
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -102,6 +103,10 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
     loadEstimates()
   }, [storeId, dateFrom, dateTo])
 
+  useEffect(() => {
+    setClient(selectedEstimate?.customer_id || '')
+  }, [selectedEstimate?.customer_id])
+
   const filteredEstimates = estimates.filter(e => {
     if (filterStatus === "all") return true
     return e.status === filterStatus
@@ -134,7 +139,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
       case 'pending':
         return <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">Pendiente</Badge>
       case 'completed':
-        return <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Convertida</Badge>
+        return <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Completada</Badge>
       case 'cancelled':
         return <Badge className="bg-red-500/20 text-red-500 border-red-500/30">Cancelada</Badge>
       default:
@@ -179,6 +184,10 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
     setConverting(true)
     try {
       const pm = paymentMethods.find(p => p.id === convertPaymentMethod)
+      const customer = client && client !== 'walk-in'
+        ? customers.find(c => c.id === client)
+        : null
+
       const itemsPayload = estimateItems.map(item => ({
         product_id: item.product_id,
         product_name: item.product_name,
@@ -191,8 +200,8 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
 
       const { data: saleId, error } = await supabase.rpc('create_sale', {
         p_store_id: storeId,
-        p_customer_id: selectedEstimate.customer_id || null,
-        p_customer_name: selectedEstimate.customer_name || '',
+        p_customer_id: customer?.id || null,
+        p_customer_name: customer?.name || '',
         p_subtotal: selectedEstimate.subtotal,
         p_discount: selectedEstimate.discount,
         p_tax: selectedEstimate.tax,
@@ -229,8 +238,8 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
           return
         }
 
-        if (selectedEstimate.customer_id && convertPaymentMethod == 'A credito') {
-          saveCustomers(customers.map(c => c.id === selectedEstimate.customer_id ? { ...c , balance: c.balance + selectedEstimate.total } : c))
+        if (client && convertPaymentMethod == 'A credito') {
+          saveCustomers(customers.map(c => c.id === client ? { ...c , balance: c.balance + selectedEstimate.total } : c))
         }
         showSuccess(`Cotización convertida a venta exitosamente`)
         setEstimates(estimates.map(e => e.id === selectedEstimate.id ? { ...e, status: 'completed' as const } : e))
@@ -256,7 +265,8 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
     try {
       const { error } = await supabase
         .from('sales')
-        .update({ status: 'cancelled' })
+        // .update({ status: 'cancelled' })
+        .delete()
         .eq('id', confirmCancel.id)
 
       if (error) {
@@ -369,7 +379,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
       setPrintItems([])
       setWhatsappPreview({ estimate, dataUrl })
 
-      const message = `Cotización #${estimate.estimate_number} de ${storeName}\nCliente: ${estimate.customer_name || 'Cliente general'}\nTotal: ${getCurrencySymbol(estimate.currency_paid)}${formatAmount(estimate.total)} ${estimate.currency_paid}\n\nValida por 15 días`
+      const message = `Cotización #${estimate.estimate_number} de ${storeName}\nCliente: ${estimate.customer_name || 'Cliente general'}\nTotal: ${getCurrencySymbol(estimate.currency_paid)}${formatAmount(estimate.total)} ${estimate.currency_paid}\n\n`
 
       if (navigator.share && navigator.canShare) {
         const blob = await (await fetch(dataUrl)).blob()
@@ -447,7 +457,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="pending">Pendientes</SelectItem>
-                  <SelectItem value="completed">Convertidas</SelectItem>
+                  <SelectItem value="completed">Completadas</SelectItem>
                   <SelectItem value="cancelled">Canceladas</SelectItem>
                 </SelectContent>
               </Select>
@@ -788,7 +798,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
                   className="flex-1 bg-green-500 hover:bg-green-600 text-white"
                   onClick={() => {
                     if (whatsappPreview) {
-                      const message = `Cotización #${whatsappPreview.estimate.estimate_number} de ${storeName}\nCliente: ${whatsappPreview.estimate.customer_name || 'Cliente general'}\nTotal: ${getCurrencySymbol(whatsappPreview.estimate.currency_paid)}${formatAmount(whatsappPreview.estimate.total)} ${whatsappPreview.estimate.currency_paid}\n\nValida por 15 días`
+                      const message = `Cotización #${whatsappPreview.estimate.estimate_number} de ${storeName}\nCliente: ${whatsappPreview.estimate.customer_name || 'Cliente general'}\nTotal: ${getCurrencySymbol(whatsappPreview.estimate.currency_paid)}${formatAmount(whatsappPreview.estimate.total)} ${whatsappPreview.estimate.currency_paid}\n\n`
                       const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
                       window.open(whatsappUrl, '_blank')
                       setWhatsappPreview(null)
@@ -847,6 +857,22 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {(!client || client === '' || client === 'walk-in')  && (
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Cliente</Label>
+                <Select value={client} onValueChange={setClient}>
+                  <SelectTrigger className="bg-input border-border">
+                    <SelectValue placeholder="Cliente General" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="walk-in">Cliente General</SelectItem>
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label className="text-sm text-foreground">Método de pago</Label>
               <Select value={convertPaymentMethod} onValueChange={setConvertPaymentMethod}>
@@ -857,7 +883,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
                   {paymentMethods.map(pm => (
                     <SelectItem key={pm.id} value={pm.id}>{pm.name} ({pm.currency})</SelectItem>
                   ))}
-                  {selectedEstimate && selectedEstimate?.customer_id !== '' && selectedEstimate?.customer_id !== 'walk-in' && (<SelectItem value="A credito">A credito</SelectItem>)}
+                  {selectedEstimate && client && client !== 'walk-in' && (<SelectItem value="A credito">A credito</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
