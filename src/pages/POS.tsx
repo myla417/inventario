@@ -91,6 +91,15 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
     }))
   }
 
+  const setCartQuantity = (index: number, value: string) => {
+    const qty = parseInt(value) || 1
+    if (qty <= 0) return
+    setCart(cart.map((c, i) => {
+      if (i !== index) return c
+      return { ...c, quantity: qty, total: qty * c.unit_price }
+    }))
+  }
+
   const removeFromCart = (index: number) => {
     setCart(cart.filter((_, i) => i !== index))
   }
@@ -376,14 +385,20 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCartQuantity(index, -1)}>
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <span className="w-8 text-center text-foreground">{item.quantity}</span>
-                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCartQuantity(index, 1)}>
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
+                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCartQuantity(index, -1)}>
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <Input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => setCartQuantity(index, e.target.value)}
+                      className="w-14 h-7 text-center text-foreground bg-input border-border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      min="1"
+                    />
+                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCartQuantity(index, 1)}>
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
                 <div className="text-right min-w-[80px]">
                   <p className="text-sm font-bold text-foreground">${formatAmount(item.total)}</p>
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-secondary" onClick={() => removeFromCart(index)}>
