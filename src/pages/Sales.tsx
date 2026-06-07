@@ -111,7 +111,7 @@ export default function Sales({ storeId, userRole, products, customers, saveProd
     loadAllSaleItems()
   }, [sales])
 
-  const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0)
+  const totalRevenue = sales.reduce((sum, s) => sum + (s.total - (s.shipping_cost || 0)), 0)
   const totalProfit = totalRevenue - allSaleItems.reduce((sum, s) => sum + s.cost, 0)
   const totalCompleted = sales.length
 
@@ -211,11 +211,12 @@ export default function Sales({ storeId, userRole, products, customers, saveProd
     for (const sale of sales) {
       const method = sale.payment_method || 'Sin método'
       const existing = map.get(method)
+      const revenueExclShipping = sale.total - (sale.shipping_cost || 0)
       if (existing) {
         existing.count += 1
-        existing.total += sale.total
+        existing.total += revenueExclShipping
       } else {
-        map.set(method, { method, count: 1, total: sale.total })
+        map.set(method, { method, count: 1, total: revenueExclShipping })
       }
     }
     return Array.from(map.values()).sort((a, b) => b.total - a.total)
@@ -233,15 +234,16 @@ export default function Sales({ storeId, userRole, products, customers, saveProd
       const date = new Date(sale.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
       const existing = map.get(date)
       const cost = saleCostMap.get(sale.id) || 0
-      const profit = sale.total - cost
+      const revenueExclShipping = sale.total - (sale.shipping_cost || 0)
+      const profit = revenueExclShipping - cost
       if (existing) {
-        existing.revenue += sale.total
+        existing.revenue += revenueExclShipping
         existing.profit += profit
         existing.count += 1
       } else {
         map.set(date, {
           date,
-          revenue: sale.total,
+          revenue: revenueExclShipping,
           profit,
           count: 1,
         })
@@ -807,6 +809,12 @@ export default function Sales({ storeId, userRole, products, customers, saveProd
                     <span className="text-foreground">${formatAmount(selectedSale.tax)}</span>
                   </div>
                 )}
+                {selectedSale.shipping_cost ? (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Envío</span>
+                    <span className="text-primary">+${formatAmount(selectedSale.shipping_cost)}</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between text-base font-bold border-t border-border pt-2">
                   <span className="text-foreground">Total</span>
                   <span className="text-foreground">${formatAmount(selectedSale.total)}</span>

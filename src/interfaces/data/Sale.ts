@@ -19,6 +19,7 @@ export interface Sale {
   created_by: string
   bank_reference?: string | null
   bank_reference_name?: string | null
+  shipping_cost?: number | null
   items?: SaleItem[]
 }
 

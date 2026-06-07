@@ -59,6 +59,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
   const [client, setClient] = useState<string>("")
   const [bankReference, setBankReference] = useState("")
   const [bankReferenceName, setBankReferenceName] = useState("")
+  const [shippingCost, setShippingCost] = useState(0)
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -173,6 +174,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
     if (!selectedEstimate) return
     setConvertPaymentMethod(selectedEstimate.payment_method || paymentMethods.find(p => p.currency === selectedEstimate.currency_paid)?.id || "")
     setKeepExchangeRate(false)
+    setShippingCost(selectedEstimate.shipping_cost || 0)
     setShowConvertDialog(true)
   }
   const actualCurrency = paymentMethods.find(p => p.id === convertPaymentMethod)?.currency
@@ -180,7 +182,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
         ? selectedEstimate?.exchange_rate
         : (exchangeRates.find(r => r.currency === actualCurrency)?.rate_exchange || selectedEstimate?.exchange_rate)
 
-  const totalValue = (selectedEstimate?.total || 1)  / (exchangeRate || 1)
+  const totalValue = ((selectedEstimate?.subtotal || 0) - (selectedEstimate?.discount || 0) + shippingCost) / (exchangeRate || 1)
   const confirmConvertToSale = async () => {
     if (converting || !selectedEstimate) return
     setConverting(true)
@@ -207,7 +209,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
         p_subtotal: selectedEstimate.subtotal,
         p_discount: selectedEstimate.discount,
         p_tax: selectedEstimate.tax,
-        p_total: selectedEstimate.total,
+        p_total: selectedEstimate.subtotal - selectedEstimate.discount + shippingCost,
         p_payment_method: pm?.name || convertPaymentMethod,
         p_currency_paid: pm?.currency || selectedEstimate.currency_paid,
         p_exchange_rate: exchangeRate,
@@ -216,6 +218,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
         p_estimate_number: null,
         p_bank_reference: bankReference || null,
         p_bank_reference_name: bankReferenceName || null,
+        p_shipping_cost: shippingCost,
         p_items: itemsPayload,
       })
 
@@ -243,7 +246,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
         }
 
         if (client && convertPaymentMethod == 'A credito') {
-          saveCustomers(customers.map(c => c.id === client ? { ...c , balance: c.balance + selectedEstimate.total } : c))
+          saveCustomers(customers.map(c => c.id === client ? { ...c , balance: c.balance + (selectedEstimate.subtotal - selectedEstimate.discount + shippingCost) } : c))
         }
         showSuccess(`Cotización convertida a venta exitosamente`)
         setEstimates(estimates.map(e => e.id === selectedEstimate.id ? { ...e, status: 'completed' as const } : e))
@@ -251,6 +254,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
         setEstimateItems([])
         setBankReference("")
         setBankReferenceName("")
+        setShippingCost(0)
       }
     } catch (err) {
       showError("Error inesperado al convertir la cotización")
@@ -685,6 +689,12 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
                     <span className="text-foreground">${formatAmount(selectedEstimate.tax)}</span>
                   </div>
                 )}
+                {selectedEstimate.shipping_cost ? (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Envío</span>
+                    <span className="text-primary">+${formatAmount(selectedEstimate.shipping_cost)}</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between text-base font-bold border-t border-border pt-2">
                   <span className="text-foreground">Total</span>
                   <span className="text-foreground">{getCurrencySymbol(selectedEstimate.currency_paid)}{formatAmount(selectedEstimate.total)}</span>
@@ -768,6 +778,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
               <p>Subtotal: ${formatAmount(printEstimate.subtotal)}</p>
               {printEstimate.discount > 0 && <p className="text-red-600">Descuento: -${formatAmount(printEstimate.discount)}</p>}
               {printEstimate.tax > 0 && <p>Impuesto: ${formatAmount(printEstimate.tax)}</p>}
+              {printEstimate.shipping_cost ? <p>Envío: +${formatAmount(printEstimate.shipping_cost)}</p> : null}
               <p className="text-xl font-bold">Total: {getCurrencySymbol(printEstimate.currency_paid)}{formatAmount(printEstimate.total)} {printEstimate.currency_paid}</p>
             </div>
           </div>
@@ -922,6 +933,16 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
                 ) : null
               })()
             )}
+            <div className="space-y-2">
+              <Label className="text-sm text-foreground">Costo de envío ($)</Label>
+              <Input
+                type="number"
+                value={shippingCost || ""}
+                onChange={(e) => setShippingCost(parseFloat(e.target.value) || 0)}
+                className="bg-input border-border"
+                placeholder="0.00"
+              />
+            </div>
             {convertPaymentMethod && convertPaymentMethod !== 'A credito' && actualCurrency !== 'COP' && (
               <>
                 {selectedEstimate?.exchange_rate && selectedEstimate.exchange_rate > 1 && (

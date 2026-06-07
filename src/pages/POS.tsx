@@ -4,10 +4,9 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Minus, ShoppingCart, FileText, X, Package, CheckCircle, AlertCircle } from "lucide-react"
+import { Search, Plus, Minus, ShoppingCart, FileText, X, Package, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import type { CartItem } from "@/interfaces/data/Sale"
+import type { CartItem, SaleItem } from "@/interfaces/data/Sale"
 import type { Product } from "@/interfaces/data/Product"
 import type { Customer } from "@/interfaces/data/Customer"
 import type { PaymentMethod } from "@/interfaces/data/PaymentMethod"
@@ -32,12 +31,15 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
   const [selectedCustomer, setSelectedCustomer] = useState<string>("")
   const [paymentMethod, setPaymentMethod] = useState<string>("")
   const [discount, setDiscount] = useState(0)
+  const [shippingCost, setShippingCost] = useState(0)
   const [saving, setSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
   const [showBankRefDialog, setShowBankRefDialog] = useState(false)
   const [bankReference, setBankReference] = useState("")
   const [bankReferenceName, setBankReferenceName] = useState("")
+  const [estimateSearch, setEstimateSearch] = useState("")
+  const [estimateLoading, setEstimateLoading] = useState(false)
 
   const localProducts = useMemo(() => {
     const map = new Map<string, Product>()
@@ -69,7 +71,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
           : c
       ))
     } else {
-      setCart([...cart, {
+      setCart([{
         product_id: product.id,
         product_name: product.name,
         sku: product.sku,
@@ -78,7 +80,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
         cost: product.cost,
         is_wholesale: false,
         total: product.retail_price,
-      }])
+      }, ...cart])
     }
   }
 
@@ -118,7 +120,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
   const selectedCurrency = selectedPm?.currency || "COP"
 
   const subtotal = cart.reduce((sum, c) => sum + c.total, 0)
-  const total = subtotal - discount
+  const total = subtotal - discount + shippingCost
   const totalInCurrency = convertCurrency(total, selectedCurrency, rates)
 
   const getExchangeRate = (currency: string): number => {
@@ -150,6 +152,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
     setSelectedCustomer("")
     setPaymentMethod("")
     setDiscount(0)
+    setShippingCost(0)
     setSearchTerm("")
   }
 
@@ -224,6 +227,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
         p_estimate_number: null,
         p_bank_reference: bankReference || null,
         p_bank_reference_name: bankReferenceName || null,
+        p_shipping_cost: shippingCost,
         p_items: itemsPayload,
       })
 
@@ -293,6 +297,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
         p_amount_paid: amountPaid,
         p_is_estimate: true,
         p_estimate_number: estimateNumber,
+        p_shipping_cost: shippingCost,
         p_items: itemsPayload,
       })
 
@@ -310,6 +315,60 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
       console.error(err)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const loadEstimate = async () => {
+    if (estimateLoading || !estimateSearch.trim()) return
+    setEstimateLoading(true)
+    try {
+      const { data: estimate, error } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('estimate_number', estimateSearch.trim())
+        .eq('is_estimate', true)
+        .eq('status', 'pending')
+        .single()
+
+      if (error || !estimate) {
+        showError('Cotización no encontrada')
+        return
+      }
+
+      const { data: items } = await supabase
+        .from('sale_items')
+        .select('*')
+        .eq('sale_id', estimate.id)
+
+      if (items) {
+        setCart(items.map((i: SaleItem) => ({
+          product_id: i.product_id,
+          product_name: i.product_name,
+          sku: localProducts.get(i.product_id)?.sku || '',
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          cost: i.cost,
+          is_wholesale: i.is_wholesale,
+          total: i.total,
+        })))
+      }
+
+      setDiscount(estimate.discount || 0)
+      setShippingCost(estimate.shipping_cost || 0)
+
+      const customer = customers.find(c => c.name === estimate.customer_name)
+      setSelectedCustomer(customer?.id || (estimate.customer_name ? 'walk-in' : ''))
+
+      const pm = paymentMethods.find(p => p.name === estimate.payment_method)
+      setPaymentMethod(pm?.id || '')
+
+      showSuccess(`Cotización ${estimate.estimate_number} cargada`)
+      setEstimateSearch("")
+    } catch (err) {
+      showError('Error al buscar cotización')
+      console.error(err)
+    } finally {
+      setEstimateLoading(false)
     }
   }
 
@@ -357,15 +416,32 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
         </div>
       </div>
 
-      <div className="w-full lg:w-96 xl:w-[420px] border-t lg:border-t-0 lg:border-l border-border bg-card flex flex-col">
-        <div className="p-4 border-b border-border">
+      <div className="w-full lg:w-96 xl:w-[420px] border-t lg:border-t-0 lg:border-l border-border bg-card flex flex-col max-lg:max-h-[65vh]">
+        <div className="p-4 border-b border-border flex justify-between gap-4">
           <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
             Carrito ({cart.length})
           </h2>
+          <div className="flex gap-2 flex-1">
+            <Input
+              value={estimateSearch}
+              onChange={(e) => setEstimateSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && loadEstimate()}
+              placeholder="Buscar COT-..."
+              className="bg-input border-border h-8 text-sm"
+            />
+            <Button
+              size="icon"
+              className="h-8 w-8 bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+              onClick={loadEstimate}
+              disabled={estimateLoading}
+            >
+              {estimateLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
 
-        <div className="flex-1 p-4 overflow-auto space-y-3">
+        <div className="flex-1 p-4 overflow-auto space-y-3 bg-yellow-500/20">
           {cart.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">Carrito vacío</p>
           ) : (
@@ -412,21 +488,21 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
 
         <div className="border-t border-border p-4 space-y-3">
           <div className="space-y-2">
-            <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-              <SelectTrigger className="bg-input border-border">
-                <SelectValue placeholder="Cliente (opcional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="walk-in">Cliente General</SelectItem>
-                {customers.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             <div className="flex gap-2">
+              <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                <SelectTrigger className="bg-input border-border">
+                  <SelectValue placeholder="Cliente (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="walk-in">Cliente General</SelectItem>
+                  {customers.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger className="bg-input border-border flex-1">
+                <SelectTrigger className="bg-input border-border">
                   <SelectValue placeholder="Método de pago" />
                 </SelectTrigger>
                 <SelectContent>
@@ -436,20 +512,29 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
                   {selectedCustomer !== '' && selectedCustomer !== 'walk-in' && (<SelectItem value="A credito">A credito</SelectItem>)}
                 </SelectContent>
               </Select>
-              <div className="w-24 flex items-center">
-                <Badge variant="outline" className="border-primary text-primary font-mono">{selectedCurrency}</Badge>
-              </div>
             </div>
 
-            <div>
-              <label className="text-xs text-muted-foreground">Descuento ($)</label>
-              <Input
-                type="number"
-                value={discount || ""}
-                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                className="bg-input border-border"
-                placeholder="0.00"
-              />
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">Descuento ($)</label>
+                <Input
+                  type="number"
+                  value={discount || ""}
+                  onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                  className="bg-input border-border"
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">Costo de envío ($)</label>
+                <Input
+                  type="number"
+                  value={shippingCost || ""}
+                  onChange={(e) => setShippingCost(parseFloat(e.target.value) || 0)}
+                  className="bg-input border-border"
+                  placeholder="0.00"
+                />
+              </div>
             </div>
           </div>
 
@@ -464,6 +549,12 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
               <div className="flex justify-between text-secondary">
                 <span>Descuento</span>
                 <span>-${formatAmount(discount)}</span>
+              </div>
+            )}
+            {shippingCost > 0 && (
+              <div className="flex justify-between text-primary">
+                <span>Envío</span>
+                <span>+${formatAmount(shippingCost)}</span>
               </div>
             )}
             <div className="flex justify-between text-lg font-bold text-foreground">
