@@ -823,7 +823,7 @@ export default function Sales({ storeId, userRole, products, customers, saveProd
                   <div>
                     <div className="flex justify-between text-primary font-medium">
                       <span>Equivale</span>
-                      <span>{selectedSale.currency_paid === 'USD' ? '$' : 'Bs'}{formatAmount(totalInCurrency)}</span>
+                      <span>{selectedSale.currency_paid === 'VES' ? 'Bs' : '$'}{formatAmount(totalInCurrency)}</span>
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Tasa de cambio</span>

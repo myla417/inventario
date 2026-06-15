@@ -8,7 +8,7 @@ export interface Sale {
   tax: number
   total: number
   payment_method: string
-  currency_paid: 'USD' | 'COP' | 'VES'
+  currency_paid: 'USD' | 'COP' | 'VES' | 'DLS'
   exchange_rate: number
   amount_paid: number
   is_estimate: boolean

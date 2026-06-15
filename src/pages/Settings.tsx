@@ -27,7 +27,7 @@ export default function SettingsPage({ storeId, initialStore, initialPaymentMeth
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(initialPaymentMethods)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null)
-  const [formData, setFormData] = useState({ name: '', currency: 'COP' as 'USD' | 'COP' | 'VES' })
+  const [formData, setFormData] = useState({ name: '', currency: 'COP' as 'USD' | 'COP' | 'VES' | 'DLS' })
   const [savingStore, setSavingStore] = useState(false)
   const [savingRates, setSavingRates] = useState(false)
   const [savingMethod, setSavingMethod] = useState(false)
@@ -56,7 +56,7 @@ export default function SettingsPage({ storeId, initialStore, initialPaymentMeth
     setSavingRates(false)
   }
 
-  const updateRate = (currency: 'USD' | 'COP' | 'VES', value: number) => {
+  const updateRate = (currency: 'USD' | 'COP' | 'VES' | 'DLS', value: number) => {
     setRates(rates.map(r => r.currency === currency ? { ...r, rate_exchange: value } : r))
   }
 
@@ -149,7 +149,7 @@ export default function SettingsPage({ storeId, initialStore, initialPaymentMeth
                 type="number"
                 step="0.01"
                 value={rate.rate_exchange}
-                onChange={(e) => updateRate(rate.currency as 'USD' | 'COP' | 'VES', parseFloat(e.target.value) || 0)}
+                onChange={(e) => updateRate(rate.currency as 'USD' | 'COP' | 'VES' | 'DLS', parseFloat(e.target.value) || 0)}
                 className="bg-input border-border w-40"
               />
             </div>
@@ -193,11 +193,12 @@ export default function SettingsPage({ storeId, initialStore, initialPaymentMeth
             </div>
             <div className="space-y-2">
               <Label>Moneda</Label>
-              <Select value={formData.currency} onValueChange={(v) => setFormData({ ...formData, currency: v as 'USD' | 'COP' | 'VES' })}>
+              <Select value={formData.currency} onValueChange={(v) => setFormData({ ...formData, currency: v as 'USD' | 'COP' | 'VES' | 'DLS' })}>
                 <SelectTrigger className="bg-input border-border"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-card border-border">
                   <SelectItem value="COP">COP - Peso Colombiano</SelectItem>
                   <SelectItem value="USD">USD - Dólar</SelectItem>
+                  <SelectItem value="DLS">DLS - Dólar</SelectItem>
                   <SelectItem value="VES">VES - Bolívar</SelectItem>
                 </SelectContent>
               </Select>

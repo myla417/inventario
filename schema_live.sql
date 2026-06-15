@@ -3287,7 +3287,7 @@ CREATE TABLE "public"."exchange_rates" (
     "rate_exchange" numeric(12,4) DEFAULT 1 NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "updated_by" "text" DEFAULT "public"."username"(),
-    CONSTRAINT "exchange_rates_currency_check" CHECK (("currency" = ANY (ARRAY['USD'::"text", 'COP'::"text", 'VES'::"text"])))
+    CONSTRAINT "exchange_rates_currency_check" CHECK (("currency" = ANY (ARRAY['USD'::"text", 'DLS'::"text", 'COP'::"text", 'VES'::"text"])))
 );
 
 
@@ -3318,7 +3318,7 @@ CREATE TABLE "public"."payment_methods" (
     "currency" "text" DEFAULT 'COP'::"text" NOT NULL,
     "is_active" boolean DEFAULT true,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    CONSTRAINT "payment_methods_currency_check" CHECK (("currency" = ANY (ARRAY['USD'::"text", 'COP'::"text", 'VES'::"text"])))
+    CONSTRAINT "payment_methods_currency_check" CHECK (("currency" = ANY (ARRAY['USD'::"text", 'DLS'::"text", 'COP'::"text", 'VES'::"text"])))
 );
 
 
@@ -3433,7 +3433,7 @@ CREATE TABLE "public"."sales" (
     "paid" boolean DEFAULT true,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "created_by" "text" DEFAULT "public"."username"(),
-    CONSTRAINT "sales_currency_paid_check" CHECK (("currency_paid" = ANY (ARRAY['USD'::"text", 'COP'::"text", 'VES'::"text"]))),
+    CONSTRAINT "sales_currency_paid_check" CHECK (("currency_paid" = ANY (ARRAY['USD'::"text", 'DLS'::"text", 'COP'::"text", 'VES'::"text"]))),
     CONSTRAINT "sales_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'completed'::"text", 'cancelled'::"text"])))
 );
 

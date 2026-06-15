@@ -40,7 +40,7 @@ CREATE TABLE profiles (
 CREATE TABLE exchange_rates (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   store_id UUID REFERENCES stores(id) ON DELETE CASCADE NOT NULL,
-  currency TEXT NOT NULL CHECK (currency IN ('USD', 'COP', 'VES')),
+  currency TEXT NOT NULL CHECK (currency IN ('USD', 'DLS', 'COP', 'VES')),
   rate_exchange NUMERIC(12,4) NOT NULL DEFAULT 1,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   updated_by TEXT NOT NULL,
@@ -143,7 +143,7 @@ CREATE TABLE payment_methods (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   store_id UUID REFERENCES stores(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
-  currency TEXT NOT NULL DEFAULT 'COP' CHECK (currency IN ('USD', 'COP', 'VES')),
+  currency TEXT NOT NULL DEFAULT 'COP' CHECK (currency IN ('USD', 'DLS', 'COP', 'VES')),
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -161,7 +161,7 @@ CREATE TABLE sales (
   tax NUMERIC(12,2) NOT NULL DEFAULT 0,
   total NUMERIC(12,2) NOT NULL DEFAULT 0,
   payment_method TEXT DEFAULT '',
-  currency_paid TEXT NOT NULL DEFAULT 'COP' CHECK (currency_paid IN ('USD', 'COP', 'VES')),
+  currency_paid TEXT NOT NULL DEFAULT 'COP' CHECK (currency_paid IN ('USD', 'DLS', 'COP', 'VES')),
   exchange_rate NUMERIC(12,4) NOT NULL DEFAULT 1,
   amount_paid NUMERIC(12,2) NOT NULL DEFAULT 0,
   is_estimate BOOLEAN NOT NULL DEFAULT FALSE,

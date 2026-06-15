@@ -152,7 +152,6 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
 
   const getCurrencySymbol = (currency: string) => {
     switch (currency) {
-      case 'USD': return '$'
       case 'VES': return 'Bs'
       default: return '$'
     }
@@ -703,7 +702,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
                   <div>
                     <div className="flex justify-between text-primary font-medium">
                       <span>Equivale</span>
-                      <span>{selectedEstimate.currency_paid === 'USD' ? '$' : 'Bs'}{formatAmount(totalInCurrency)}</span>
+                      <span>{selectedEstimate.currency_paid === 'VES' ? 'Bs' : '$'}{formatAmount(totalInCurrency)}</span>
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Tasa de cambio</span>

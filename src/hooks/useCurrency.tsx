@@ -12,6 +12,7 @@ interface CurrencyContextType {
 
 const defaultRates: ExchangeRates = {
   USD: 3700,
+  DLS: 3700,
   COP: 1,
   VES: 6.5,
 }
@@ -38,11 +39,12 @@ export function CurrencyProvider({ children, storeId }: { children: React.ReactN
       .overrideTypes<Array<ExchangeRate>>()
     if (data && data.length > 0) {
       setExchangeRates(data)
-      const newRates: ExchangeRates = { USD: 3700, COP: 1, VES: 6.5 }
+      const newRates: ExchangeRates = { USD: 3700, COP: 1, VES: 6.5, DLS: 3700 }
       data.forEach((r) => {
         if (r.currency === 'USD') newRates.USD = r.rate_exchange
         if (r.currency === 'COP') newRates.COP = r.rate_exchange
         if (r.currency === 'VES') newRates.VES = r.rate_exchange
+        if (r.currency === 'DLS') newRates.DLS = r.rate_exchange
       })
       setRates(newRates)
     }

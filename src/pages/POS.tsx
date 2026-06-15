@@ -49,6 +49,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
 
   const rates: ExchangeRates = {
     USD: exchangeRates.find(r => r.currency === 'USD')?.rate_exchange || 3700,
+    DLS: exchangeRates.find(r => r.currency === 'DLS')?.rate_exchange || 3700,
     COP: exchangeRates.find(r => r.currency === 'COP')?.rate_exchange || 1,
     VES: exchangeRates.find(r => r.currency === 'VES')?.rate_exchange || 6.5,
   }
@@ -94,7 +95,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
   }
 
   const setCartQuantity = (index: number, value: string) => {
-    const qty = parseInt(value) || 1
+    const qty = parseFloat(value) || 1
     if (qty <= 0) return
     setCart(cart.map((c, i) => {
       if (i !== index) return c
@@ -564,7 +565,7 @@ export default function POS({ storeId, products, customers, paymentMethods, exch
             {selectedCurrency !== 'COP' && (
               <div className="flex justify-between text-primary font-medium">
                 <span>Equivale</span>
-                <span>{selectedCurrency === 'USD' ? '$' : 'Bs'}{formatAmount(totalInCurrency)}</span>
+                <span>{selectedCurrency === 'VES' ? 'Bs' : '$'}{formatAmount(totalInCurrency)}</span>
               </div>
             )}
           </div>

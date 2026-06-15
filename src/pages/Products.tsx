@@ -706,7 +706,7 @@ export default function Products({ storeId, userRole, initialProducts, initialCa
                 type="number"
                 min="0"
                 value={movementQuantity || ""}
-                onChange={(e) => setMovementQuantity(parseInt(e.target.value) || 0)}
+                onChange={(e) => setMovementQuantity(parseFloat(e.target.value) || 0)}
                 className="bg-input border-border"
               />
             </div>
