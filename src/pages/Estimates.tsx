@@ -414,6 +414,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
   }
 
   const totalInCurrency = selectedEstimate ? selectedEstimate.total / selectedEstimate.exchange_rate : 0
+  const printTotalInCurrency = printEstimate ? printEstimate.total / printEstimate.exchange_rate : 0
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -778,7 +779,13 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
               {printEstimate.discount > 0 && <p className="text-red-600">Descuento: -${formatAmount(printEstimate.discount)}</p>}
               {printEstimate.tax > 0 && <p>Impuesto: ${formatAmount(printEstimate.tax)}</p>}
               {printEstimate.shipping_cost ? <p>Envío: +${formatAmount(printEstimate.shipping_cost)}</p> : null}
-              <p className="text-xl font-bold">Total: {getCurrencySymbol(printEstimate.currency_paid)}{formatAmount(printEstimate.total)} {printEstimate.currency_paid}</p>
+              <p className="text-xl font-bold">Total: {getCurrencySymbol(printEstimate.currency_paid)}{formatAmount(printEstimate.total)}</p>
+              {printEstimate.currency_paid !== 'COP' && (
+                  <>
+                    <p className="flex justify-between text-primary font-bold"><strong>Equivale</strong> {printEstimate.currency_paid === 'VES' ? 'Bs' : '$'}{formatAmount(printTotalInCurrency)} {printEstimate.currency_paid}</p>
+                    <p className="flex justify-between text-xs text-muted-foreground"><p>Tasa de cambio</p> {printEstimate.exchange_rate}</p>
+                  </>
+                )}
             </div>
           </div>
         </div>
