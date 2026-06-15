@@ -781,10 +781,7 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
               {printEstimate.shipping_cost ? <p>Envío: +${formatAmount(printEstimate.shipping_cost)}</p> : null}
               <p className="text-xl font-bold">Total: {getCurrencySymbol(printEstimate.currency_paid)}{formatAmount(printEstimate.total)}</p>
               {printEstimate.currency_paid !== 'COP' && (
-                  <>
-                    <p className="flex justify-between text-primary font-bold"><strong>Equivale</strong> {printEstimate.currency_paid === 'VES' ? 'Bs' : '$'}{formatAmount(printTotalInCurrency)} {printEstimate.currency_paid}</p>
-                    <p className="flex justify-between text-xs text-muted-foreground"><p>Tasa de cambio</p> {printEstimate.exchange_rate}</p>
-                  </>
+                <p className="font-bold">Equivale: {printEstimate.currency_paid === 'VES' ? 'Bs' : '$'}{formatAmount(printTotalInCurrency)} {printEstimate.currency_paid}</p>
                 )}
             </div>
           </div>
