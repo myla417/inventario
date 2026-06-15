@@ -19,7 +19,7 @@ export default function Login({ onLogin }: LoginProps) {
     e.preventDefault()
     setLoading(true)
     setError("")
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: password.trim() })
     if (error) {
       setError(error.message)
       setLoading(false)
