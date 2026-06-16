@@ -187,6 +187,7 @@ function AppContext() {
     { id: "/sales", label: "Reportes", icon: DollarSign },
     { id: "/products", label: "Inventario", icon: Package },
     { id: "/customers", label: "Clientes", icon: Users },
+    { id: "/settings", label: "Configuración", icon: Settings },
   ]
 
   const menuItems = userRole?.role === 'cashier' ? cashierMenuItems : adminMenuItems

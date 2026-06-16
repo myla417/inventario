@@ -388,20 +388,21 @@ export default function Estimates({ storeId, storeName, products, paymentMethods
       setPrintItems([])
       setWhatsappPreview({ estimate, dataUrl })
 
-      const message = `Cotización #${estimate.estimate_number} de ${storeName}\nCliente: ${estimate.customer_name || 'Cliente general'}\nTotal: ${getCurrencySymbol(estimate.currency_paid)}${formatAmount(estimate.total)} ${estimate.currency_paid}\n\n`
+      //const message = `Cotización #${estimate.estimate_number} de ${storeName}\nCliente: ${estimate.customer_name || 'Cliente general'}\nTotal: ${getCurrencySymbol(estimate.currency_paid)}${formatAmount(estimate.total)} ${estimate.currency_paid}\n\n`
 
       if (navigator.share && navigator.canShare) {
         const blob = await (await fetch(dataUrl)).blob()
         const file = new File([blob], `cotizacion-${estimate.estimate_number}.png`, { type: 'image/png' })
         if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ title: `Cotización #${estimate.estimate_number}`, text: message, files: [file] })
+          //await navigator.share({ title: `Cotización #${estimate.estimate_number}`, text: message, files: [file] })
+          await navigator.share({ title: `Cotización #${estimate.estimate_number}`, files: [file] })
           showSuccess('Cotización compartida exitosamente')
           setWhatsappPreview(null)
           return
         }
       }
 
-      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Cotización #${estimate.estimate_number}`)}`
       window.open(whatsappUrl, '_blank')
     } catch (err) {
       console.error('Error sharing to WhatsApp:', err)
